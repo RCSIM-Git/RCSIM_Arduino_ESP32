@@ -1,0 +1,40 @@
+# ==========================================
+# C++ / Arduino / ESP32 gitignore for RCSIM
+# ==========================================
+
+# 1. Arduino IDE Build artifacts
+build/
+sketch/
+/Arduino Tier 1/build/
+/ESP32 Tier 6 Watchdog for RPi/build/
+
+# Compiled Binaries / Hex / Map files
+*.hex
+*.bin
+*.elf
+*.map
+*.o
+*.d
+
+# 2. PlatformIO (Pio) temporary and build directories
+.pio/
+.pioenvs/
+.piolibdeps/
+.clangd/
+
+# 3. ESP-IDF build and temporary files
+dependencies.lock
+managed_components/
+
+# 4. OS metadata & IDE configurations
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# 5. Backup / Temporary files
+*~
+*.bak
+*.tmp
+*.swp
