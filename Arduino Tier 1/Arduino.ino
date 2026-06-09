@@ -24,6 +24,7 @@
 String inputString = "";             // Bufor na przychodzące dane tekstowe
 unsigned long lastDataReceivedTime = 0; // Czas odebrania ostatniej poprawnej ramki
 bool failsafeActive = true;          // Status mechanizmu bezpieczeństwa
+bool estopActive = false;            // Status blokady awaryjnej (E-Stop)
 
 void setup() {
   pinMode(LED_PIN, OUTPUT);
@@ -41,11 +42,16 @@ void setup() {
 }
 
 void loop() {
-  // Odczyt danych z portu szeregowego (format: "ch1,ch2,...,ch8\n")
+  // Odczyt danych z portu szeregowego (format: "ch1,ch2,...,ch8\n" lub komendy tekstowe "ESTOP", "ARM")
   while (Serial.available()) {
     char inChar = (char)Serial.read();
     if (inChar == '\n') {
-      if (inputString.length() > 10) { // Podstawowa walidacja długości pakietu
+      inputString.trim();
+      if (inputString.equals("ESTOP")) {
+        triggerEStop();
+      } else if (inputString.equals("ARM")) {
+        triggerArm();
+      } else if (inputString.length() > 10) { // Podstawowa walidacja długości pakietu
         processInputString();
       }
       inputString = "";
@@ -65,10 +71,32 @@ void loop() {
 }
 
 /**
+ * Funkcje pomocnicze dla E-Stop / Arm
+ */
+void triggerEStop() {
+  estopActive = true;
+  failsafeActive = true;
+  pinMode(PPM_OUTPUT_PIN, INPUT); // Fizyczne odcięcie sygnału od aparatury
+  digitalWrite(LED_PIN, LOW);
+  Serial.println("E-STOP TRIGGERED: Signal Killed.");
+}
+
+void triggerArm() {
+  if (estopActive) {
+    estopActive = false;
+    Serial.println("E-STOP CLEARED: Ready to Arm.");
+  }
+}
+
+/**
  * Funkcja do parsowania odebranego ciągu i ustawiania kanałów PPM.
  * Implementuje atomowe odświeżanie - aktualizacja następuje tylko po odebraniu pełnej ramki.
  */
 void processInputString() {
+  if (estopActive) {
+    return; // Ignorujemy pakiety sterujące gdy E-Stop jest aktywny
+  }
+
   int values[NUM_CHANNELS];
   int count = 0;
   int currentVal = 0;

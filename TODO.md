@@ -1,6 +1,7 @@
 # TODO: Firmware Subsystem (Tiers 1, 2, 6)
 
 ## 🛠️ Do Naprawy / Stabilność
+- [x] **Arduino E-Stop Support (Tier 1)**: Dodano obsługę komend ESTOP i ARM w konwerterze PPM w celu fizycznego odcinania sygnału podczas awaryjnego zatrzymania klawiszem SPACJA.
 - [ ] **SBUS Jitter (Tier 6)**: Zaimplementować filtrację Median Filter dla odczytów SBUS w Watchdogu, aby wyeliminować drgania serw.
 - [ ] **I2C Bus Collision**: Usprawnić obsługę błędów magistrali I2C przy jednoczesnym dostępie ESP32 i RPi.
 
