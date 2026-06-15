@@ -66,7 +66,9 @@ int ch2_val = 1500;
 int ch3_val = 1500;
 
 // Filtry programowe w celu eliminacji szumów (Software Exponential Filter)
-const float filter_beta = 0.3; // Współczynnik wygładzania sygnału
+// Optymailzacja wydajności: brak FPU w AVR - używamy całkowitoliczbowego odpowiednika 0.3 (x*3/10)
+const int filter_beta_num = 3;   // Licznik dla współczynnika 0.3
+const int filter_beta_den = 10;  // Mianownik dla współczynnika 0.3
 
 // Ustawienia autokalibracji punktu neutralnego przy starcie
 int ch1_neutral = 1500;
@@ -219,9 +221,10 @@ void loop() {
   bool ch3_active = (now_ms - t_ch3 < FAILSAFE_TIMEOUT);
   
   // Zastosowanie filtra dolnoprzepustowego (wykładniczego) w celu eliminacji szumów
-  ch1_val = ch1_val + filter_beta * (raw_ch1 - ch1_val);
-  ch2_val = ch2_val + filter_beta * (raw_ch2 - ch2_val);
-  ch3_val = ch3_val + filter_beta * (raw_ch3 - ch3_val);
+  // Optymalizacja: (val * 3) / 10 zastępuje powolne obliczenia na typie float na Arduino Nano (AVR)
+  ch1_val = ch1_val + ((raw_ch1 - ch1_val) * filter_beta_num) / filter_beta_den;
+  ch2_val = ch2_val + ((raw_ch2 - ch2_val) * filter_beta_num) / filter_beta_den;
+  ch3_val = ch3_val + ((raw_ch3 - ch3_val) * filter_beta_num) / filter_beta_den;
   
   // Stan migania kierunkowskazów (generator fali prostokątnej bezblokujący)
   bool blink_state = (now_ms % (2 * BLINK_INTERVAL_MS)) < BLINK_INTERVAL_MS;
