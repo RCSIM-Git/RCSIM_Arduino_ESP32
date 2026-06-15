@@ -326,11 +326,12 @@ void loop() {
     lastTelem = millis();
     mpu.update();
     char j[128];
-    snprintf(j, sizeof(j), "{\"imu\":{\"ax\":%.2f,\"ay\":%.2f,\"az\":%.2f,\"gx\":%.2f,\"gy\":%.2f,\"gz\":%.2f}}",
+    // ⚡ Bolt Optimization: Use snprintf return value to avoid O(n) strlen() overhead
+    int len = snprintf(j, sizeof(j), "{\"imu\":{\"ax\":%.2f,\"ay\":%.2f,\"az\":%.2f,\"gx\":%.2f,\"gy\":%.2f,\"gz\":%.2f}}",
              mpu.getAccX(), mpu.getAccY(), mpu.getAccZ(), mpu.getGyroX(), mpu.getGyroY(), mpu.getGyroZ());
-    if (pcIP) {
+    if (pcIP && len > 0 && len < sizeof(j)) {
       udp.beginPacket(pcIP, PC_TELEMETRY_PORT);
-      udp.write((uint8_t*)j, strlen(j));
+      udp.write((uint8_t*)j, len);
       udp.endPacket();
     }
   }
