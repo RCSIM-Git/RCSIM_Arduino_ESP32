@@ -184,8 +184,8 @@ void calibratePCA9685() {
 
 void triggerFailsafe() {
   for (int i = 0; i < NUM_CHANNELS; i++) {
-    int pwm_val = map(NEUTRAL_PULSE, 1000, 2000, 205, 410);
-    pca.setPWM(i, 0, pwm_val);
+    uint16_t pwm_ticks = (NEUTRAL_PULSE * 4096UL) / (1000000UL / SERVO_FREQUENCY);
+    pca.setPWM(i, 0, pwm_ticks);
   }
   failsafeActive = true;
 }
@@ -321,20 +321,34 @@ void setup() {
 }
 
 void loop() {
-  // 1. Sterowanie UDP
+  // 1. Watchdog WiFi - Automatyczne przywracanie połączenia
+  static unsigned long lastWifiCheck = 0;
+  if (WiFi.status() != WL_CONNECTED && (millis() - lastWifiCheck > 5000)) {
+    Serial.println("Utracono Wi-Fi. Próba ponownego połączenia...");
+    WiFi.disconnect();
+    WiFi.begin(ssid, password);
+    lastWifiCheck = millis();
+  }
+
+  // 2. Sterowanie UDP
   int packetSize = udp.parsePacket();
   if (packetSize) {
-    char buf[255];
+    char buf[256]; // Zwiększono do 256, aby zapobiec przepełnieniu bufora (Buffer Overflow)
     int len = udp.read(buf, 255);
     if (len > 0) {
-      buf[len] = 0;
+      buf[len] = '\0'; // Bezpieczne zakończenie ciągu znaków null-terminatorem
       pcIP = udp.remoteIP();
       int ch = 0;
       char* t = strtok(buf, ",");
       while (t != NULL && ch < NUM_CHANNELS) {
-        int us = constrain(atoi(t), 1000, 2000);
-        // Ponieważ oscylator jest teraz perfekcyjnie skalibrowany, to mapowanie uderzy idealnie w mikrosekundy
-        pca.setPWM(ch, 0, map(us, 1000, 2000, 205, 410));
+        int parsedVal = atoi(t);
+        // Zabezpieczenie przed uszkodzonymi pakietami (odrzucenie błędnych parsowań)
+        if (parsedVal >= 800 && parsedVal <= 2200) {
+          int us = constrain(parsedVal, 1000, 2000);
+          // Precyzyjne przeliczenie ticks PCA9685 bez powolnej funkcji map() i magicznych liczb
+          uint16_t pwm_ticks = (us * 4096UL) / (1000000UL / SERVO_FREQUENCY);
+          pca.setPWM(ch, 0, pwm_ticks);
+        }
         t = strtok(NULL, ",");
         ch++;
       }
@@ -346,13 +360,13 @@ void loop() {
     }
   }
 
-  // 2. Failsafe
+  // 3. Failsafe
   if (!failsafeActive && (millis() - lastPacketTime > FAILSAFE_TIMEOUT_MS)) {
     Serial.println("FAILSAFE!");
     triggerFailsafe();
   }
 
-  // 3. Telemetria IMU
+  // 4. Telemetria IMU
   #if ENABLE_IMU
   static unsigned long lastTelem = 0;
   if (millis() - lastTelem > 50) { 

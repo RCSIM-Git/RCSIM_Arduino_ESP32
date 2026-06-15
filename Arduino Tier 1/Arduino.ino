@@ -37,6 +37,9 @@ void setup() {
   // Aparatura MT12/RM wykryje brak sygnału jako "Signal Lost"
   pinMode(PPM_OUTPUT_PIN, INPUT);
   ppmEncoder.begin(PPM_OUTPUT_PIN, NUM_CHANNELS, false); // Polaryzacja pozytywna dla większości aparatur
+#if defined(__AVR__)
+  TIMSK1 &= ~(1 << OCIE1A); // Wyłączenie przerwaniami Timera1 na starcie
+#endif
 
   Serial.println("RCSIM Arduino Bridge (Kill-Switch) Ready.");
 }
@@ -64,9 +67,21 @@ void loop() {
   // Jeśli dane nie dotrą w ciągu FAILSAFE_TIMEOUT_MS, pin przechodzi w tryb INPUT
   if (!failsafeActive && (millis() - lastDataReceivedTime > FAILSAFE_TIMEOUT_MS)) {
     failsafeActive = true;
+#if defined(__AVR__)
+    TIMSK1 &= ~(1 << OCIE1A); // Wyłączenie przerwaniami Timera1
+#endif
     pinMode(PPM_OUTPUT_PIN, INPUT); // Fizyczne odcięcie sygnału od aparatury
     digitalWrite(LED_PIN, LOW);
     Serial.println("FAILSAFE: Signal Killed.");
+  }
+
+  // Heartbeat - Szybkie, wyraźne mruganie diodą LED gdy płyną dane i system jest uzbrojony
+  if (!failsafeActive && !estopActive) {
+    if (millis() % 200 < 100) {
+      digitalWrite(LED_PIN, HIGH);
+    } else {
+      digitalWrite(LED_PIN, LOW);
+    }
   }
 }
 
@@ -76,6 +91,9 @@ void loop() {
 void triggerEStop() {
   estopActive = true;
   failsafeActive = true;
+#if defined(__AVR__)
+  TIMSK1 &= ~(1 << OCIE1A); // Wyłączenie przerwaniami Timera1
+#endif
   pinMode(PPM_OUTPUT_PIN, INPUT); // Fizyczne odcięcie sygnału od aparatury
   digitalWrite(LED_PIN, LOW);
   Serial.println("E-STOP TRIGGERED: Signal Killed.");
@@ -130,6 +148,9 @@ void processInputString() {
     if (failsafeActive) {
       failsafeActive = false;
       pinMode(PPM_OUTPUT_PIN, OUTPUT); // Przywracamy sygnał PPM (pin jako wyjście)
+#if defined(__AVR__)
+      TIMSK1 |= (1 << OCIE1A); // Włączenie przerwaniami Timera1
+#endif
       Serial.println("Signal Restored.");
     }
     
@@ -138,6 +159,5 @@ void processInputString() {
       ppmEncoder.setChannel(i, values[i]);
     }
     lastDataReceivedTime = millis();  // Odświeżenie timera aktywności
-    digitalWrite(LED_PIN, !digitalRead(LED_PIN)); // Mrugnięcie diodą przy każdym pakiecie
   }
 }
