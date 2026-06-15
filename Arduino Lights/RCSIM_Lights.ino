@@ -66,7 +66,9 @@ int ch2_val = 1500;
 int ch3_val = 1500;
 
 // Filtry programowe w celu eliminacji szumów (Software Exponential Filter)
-const float filter_beta = 0.3; // Współczynnik wygładzania sygnału
+// ⚡ Bolt Optimization: Używamy stałych całkowitych zamiast float (brak FPU na AVR)
+const int filter_num = 3; // Licznik (3/10 = 0.3)
+const int filter_den = 10; // Mianownik
 
 // Ustawienia autokalibracji punktu neutralnego przy starcie
 int ch1_neutral = 1500;
@@ -219,9 +221,10 @@ void loop() {
   bool ch3_active = (now_ms - t_ch3 < FAILSAFE_TIMEOUT);
   
   // Zastosowanie filtra dolnoprzepustowego (wykładniczego) w celu eliminacji szumów
-  ch1_val = ch1_val + filter_beta * (raw_ch1 - ch1_val);
-  ch2_val = ch2_val + filter_beta * (raw_ch2 - ch2_val);
-  ch3_val = ch3_val + filter_beta * (raw_ch3 - ch3_val);
+  // ⚡ Bolt Optimization: Integer math is >5x faster on AVR than float emulation
+  ch1_val = ch1_val + ((raw_ch1 - ch1_val) * filter_num) / filter_den;
+  ch2_val = ch2_val + ((raw_ch2 - ch2_val) * filter_num) / filter_den;
+  ch3_val = ch3_val + ((raw_ch3 - ch3_val) * filter_num) / filter_den;
   
   // Stan migania kierunkowskazów (generator fali prostokątnej bezblokujący)
   bool blink_state = (now_ms % (2 * BLINK_INTERVAL_MS)) < BLINK_INTERVAL_MS;
