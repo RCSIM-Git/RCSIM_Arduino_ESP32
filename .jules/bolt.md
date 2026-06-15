@@ -1,0 +1,3 @@
+## 2024-05-24 - Floating Point Anti-Pattern on 8-bit AVR Microcontrollers
+**Learning:** Found a major performance bottleneck where `float` was being used in a high-frequency `loop()` on an Arduino Nano (8-bit AVR). Because 8-bit AVR chips lack hardware FPUs, floating-point math is software emulated and consumes disproportionately large amounts of CPU cycles and flash memory.
+**Action:** Always replace floating-point operations with integer math approximations (e.g., `(diff * 3) / 10` instead of `diff * 0.3`) when writing code targeted for 8-bit AVR platforms like Arduino Nano or Uno, especially inside fast loops or interrupts.
