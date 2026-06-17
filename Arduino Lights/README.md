@@ -45,3 +45,19 @@ Projekt ten stanowi oprogramowanie dedykowanego sterownika oświetlenia LED dla 
 2. Połącz wejścia D8, D9, D10 z odpowiednimi kanałami odbiornika RC (użyj kabli ze wspólną masą i zasilaniem z BEC/odbiornika).
 3. Podłącz diody LED poprzez rezystory ograniczające prąd do zasilania (katody diod podłącz do pinów D2-D7 Arduino).
 4. Po uruchomieniu system dokona automatycznej kalibracji punktu neutralnego dla kierownicy i przepustnicy (upewnij się, że drążki aparatury są w pozycji neutralnej przez pierwszą sekundę po włączeniu zasilania).
+
+
++-------------------+
+                  |   Odbiornik RC    |
+                  |                   |
+                  | CH1  CH2   CH3    |
+                  +-|-----|-----|-----+
+                    |     |     |
+                 [KabelY][KabelY]       
+                  /   \   /   \ 
+                 /     \ /     \        (Sygnał + Masa)
+          [Serwo]    [ESC]      +------> Do Arduino CH3 (D10 + GND)
+            |          |                 oraz zasilanie Arduino (5V)
+            |          |
+            |          +---------------> Do Arduino CH2 (D9 Sygnał + GND)
+            +--------------------------> Do Arduino CH1 (D8 Sygnał + GND)
