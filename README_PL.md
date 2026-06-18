@@ -11,7 +11,7 @@ Poniższy schemat przedstawia strukturę przepływu sygnałów i kontroli w zale
 ```
                   +---------------------------+
                   |    Stacja Naziemna GCS    |
-                  |     (Aplikacja PC / AI)   |
+                  |     (Aplikacja PC)        |
                   +-------------+-------------+
                                 |
          +----------------------+----------------------+
