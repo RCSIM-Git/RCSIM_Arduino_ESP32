@@ -1,37 +1,37 @@
-# RCSIM - Konwerter Serial na PPM dla Arduino (v3.0 - High Stability)
+# RCSIM - Serial to PPM Converter for Arduino (v3.0 - High Stability)
 
-Ten projekt stanowi oprogramowanie mostka komunikacyjnego (Bridge) dla platformy Arduino (np. Nano/Uno z mikrokontrolerem ATmega328P), realizującego konwersję komend szeregowych z komputera stacji naziemnej (GCS) na standardowy sygnał PPM (Pulse Position Modulation) z wbudowanym sprzętowym wyłącznikiem bezpieczeństwa (Signal Kill).
+This project contains the communication bridge (Bridge) firmware for the Arduino platform (e.g., Nano/Uno with ATmega328P microcontroller), converting serial commands from a Ground Control Station (GCS) computer into a standard PPM (Pulse Position Modulation) signal with a built-in hardware safety switch (Signal Kill).
 
-## Główne Funkcje
+## Main Features
 
-1. **Konwersja Serial-to-PPM (8 kanałów):**
-   * Odbiór danych z portu szeregowego USB (Baudrate: `115200 bps`) w formacie tekstowym `"ch1,ch2,...,ch8\n"`.
-   * Przetwarzanie i kodowanie wartości mikrosekund (zakres 1000 - 2000 us) na zespolony sygnał PPM o polaryzacji dodatniej, generowany na pinie `PPM_OUTPUT_PIN` (D10).
-   * Generowanie PPM opiera się o stabilne przerwania sprzętowe (Timer1 dla AVR).
+1. **Serial-to-PPM Conversion (8 channels):**
+   * Receives control data from the USB serial port (Baudrate: `115200 bps`) in textual format: `"ch1,ch2,...,ch8\n"`.
+   * Processes and encodes microsecond values (range: 1000 - 2000 us) into a composite positive PPM signal, output on pin `PPM_OUTPUT_PIN` (D10).
+   * PPM generation is powered by stable hardware interrupts (Timer1 for AVR).
 
-2. **Krytyczny Failsafe (Fizyczne odcięcie sygnału):**
-   * W przypadku braku poprawnych ramek sterowania z komputera PC przez czas przekraczający `500 ms` (np. zawieszenie aplikacji GCS lub odłączenie kabla USB), układ wchodzi w stan awaryjny.
-   * W przeciwieństwie do prostych rozwiązań wysyłających wartości neutralne, ten moduł realizuje **Signal Kill**: wyłącza przerwania Timera1 oraz przełącza pin `PPM_OUTPUT_PIN` w tryb wejścia (`INPUT`). 
-   * Aparatura RC (np. RadioMaster MT12) podpięta przez port trenera natychmiast wykrywa całkowity brak sygnału PPM i aktywuje własną procedurę awaryjną (np. odcięcie gazu).
+2. **Critical Failsafe (Physical Signal Cutoff / Signal Kill):**
+   * If valid control frames from the host PC are missing for over `500 ms` (e.g., GCS software crash or USB cable disconnect), the board enters failsafe mode.
+   * Instead of sending neutral servo values, this module implements **Signal Kill**: it disables Timer1 interrupts and switches the output pin `PPM_OUTPUT_PIN` to high-impedance mode (`INPUT`).
+   * The RC transmitter (e.g., RadioMaster MT12) connected via the trainer port instantly detects the loss of PPM signal and triggers its own internal failsafe actions (e.g., motor cutoff).
 
-3. **Sprzętowy Wyłącznik Awaryjny (E-STOP & ARM):**
-   * Układ reaguje na natychmiastowe komendy tekstowe z GCS wysyłane poza standardowym strumieniem kanałów:
-     * `ESTOP` - Natychmiastowe zatrzymanie generowania PPM (fizyczne odcięcie pinu wyjściowego). System ignoruje wszelkie kolejne pakiety sterujące, dopóki nie zostanie uzbrojony.
-     * `ARM` - Przywrócenie możliwości działania po zaistnieniu blokady awaryjnej.
+3. **Hardware Emergency Stop (E-STOP & ARM):**
+   * The board responds to out-of-band text commands sent from the GCS:
+     * `ESTOP` - Immediately stops PPM generation (physically disabling the output pin). The system ignores any subsequent control packets until re-armed.
+     * `ARM` - Restores control output after clearing an emergency stop condition.
 
-4. **Sygnalizacja Stanu Diodą LED:**
-   * **Brak połączenia / Failsafe / E-Stop:** Dioda LED wbudowana w płytkę (`LED_PIN`) jest całkowicie wyłączona.
-   * **Normalna praca:** Dioda LED miga szybko i wyraźnie w tempie pracy systemu (~5 Hz), potwierdzając aktywny przepływ prawidłowych danych i stan uzbrojenia.
+4. **LED State Indicators:**
+   * **Disconnected / Failsafe / E-Stop:** The onboard LED (`LED_PIN`) is completely turned off.
+   * **Normal Operation:** The LED blinks rapidly (~5 Hz), confirming active, valid data throughput and armed system status.
 
-## Wymagania Sprzętowe i Biblioteki
+## Hardware Requirements & Libraries
 
-* **Mikrokontroler:** Arduino Nano / Uno (ATmega328P).
-* **Biblioteka:** `PPMEncoder` (odpowiedzialna za sprzętowe generowanie PPM na Timer1).
-* **Połączenie:** Pin D10 (Wyjście PPM) -> Wejście portu trenera (Jack 3.5mm w aparaturze RC).
+* **Microcontroller:** Arduino Nano / Uno (ATmega328P).
+* **Library:** `PPMEncoder` (responsible for hardware-based PPM generation using Timer1).
+* **Wiring:** Pin D10 (PPM Output) -> Trainer port input (3.5mm jack on the RC transmitter).
 
-## Sposób Użycia
+## Usage Instructions
 
-1. Wgraj szkic `Arduino.ino` na płytkę Arduino przy użyciu Arduino IDE.
-2. Podłącz Arduino do komputera przez port USB.
-3. W aplikacji stacji naziemnej (GCS) wybierz tryb połączenia **Arduino (Serial)**, wskaż właściwy port COM oraz prędkość **115200 bps**.
-4. Podłącz pin D10 i masę (GND) z Arduino do wejścia PPM aparatury (port trenera/DSC).
+1. Upload the `Arduino.ino` sketch to your Arduino board using the Arduino IDE.
+2. Connect the Arduino to your PC via a USB cable.
+3. In the Ground Control Station (GCS) application, select **Arduino (Serial)** connection mode, choose the correct COM port, and set the baudrate to **115200 bps**.
+4. Connect pin D10 and Ground (GND) from the Arduino to the transmitter's PPM trainer port.

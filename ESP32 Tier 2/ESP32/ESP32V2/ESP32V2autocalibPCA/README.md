@@ -1,41 +1,41 @@
-# RCSIM - Bezprzewodowy Hub Sterowania dla ESP32 z Autokalibracją PCA9685 (V3.2)
+# RCSIM - Wireless Control Hub for ESP32 with PCA9685 Autocalibration (V3.2)
 
-Projekt ten stanowi bezprzewodowy koncentrator sterowania i telemetrii (Hub), który łączy w sobie obsługę strumieniowania wideo (MJPEG), telemetrię z czujnika IMU (MPU6050) oraz sterowanie serwami przez sieć za pomocą sterownika PCA9685 z innowacyjną funkcją automatycznej kalibracji sprzętowej.
+This project is a wireless control and telemetry hub that combines MJPEG video streaming, IMU telemetry (MPU6050), and servo steering control over a network via the PCA9685 driver with a feedback-loop hardware autocalibration system.
 
-## Funkcje Kluczowe
+## Key Features
 
-1. **Autokalibracja Sprzętowa PCA9685 (`calibratePCA9685`):**
-   * Układy PCA9685 posiadają wewnętrzne oscylatory o częstotliwości nominalnej 25 MHz, jednak wykazują one spory rozrzut produkcyjny i dryft termiczny. Powoduje to, że rzeczywisty czas trwania impulsu PWM różni się od zadeklowanego.
-   * Hub wykorzystuje pętlę sprzężenia zwrotnego: kanał 15 (`CALIBRATION_CH`) z PCA9685 wysyła testowy sygnał 1500 us bezpośrednio do pinu GPIO 12 (`CALIBRATION_PIN`) mikrokontrolera ESP32.
-   * ESP32 mierzy czas trwania impulsu wysokiego za pomocą `pulseIn()` i koryguje częstotliwość wewnętrznego oscylatora układu PCA9685 w pętli (do 15 prób), dopóki błąd nie spadnie poniżej 3 mikrosekund.
-   * Wynikowa, skalibrowana częstotliwość jest zapisywana za pomocą `pca.setOscillatorFrequency(currentFreq)`.
+1. **PCA9685 Hardware Autocalibration (`calibratePCA9685`):**
+   * PCA9685 drivers rely on an internal 25 MHz oscillator, which frequently suffers from manufacturing variations and thermal drift. This causes the actual PWM pulse duration to differ from the requested microsecond settings.
+   * The hub uses a hardware feedback loop: channel 15 (`CALIBRATION_CH`) of the PCA9685 outputs a test 1500 us pulse directly to the ESP32 GPIO 12 (`CALIBRATION_PIN`).
+   * The ESP32 measures the pulse width using `pulseIn()` and adjusts the PCA9685 oscillator frequency value in a loop (up to 15 iterations) until the deviation is under 3 microseconds.
+   * The resulting calibrated frequency is applied using `pca.setOscillatorFrequency(currentFreq)`.
 
-2. **Bezprzewodowe Sterowanie UDP:**
-   * Odbiór komend sterujących w postaci tekstowej (np. `"1500,1500,1000,..."` rozdzielone przecinkami) na porcie `12345`.
-   * Przeliczanie mikrosekund (1000-2000 us) na wartości rejestrów PCA9685 bez spowalniających operacji zmiennoprzecinkowych.
-   * Zabezpieczenie przed uszkodzonymi pakietami (odrzucanie wartości spoza zakresu 800 - 2200 us).
+2. **UDP Wireless Control:**
+   * Receives comma-separated text control values (e.g., `"1500,1500,1000,..."`) over UDP port `12345`.
+   * Directly translates microsecond values (1000-2000 us) to PCA9685 register values without slow floating-point math.
+   * Filters out corrupted packets (values outside the safe 800 - 2200 us range are discarded).
 
-3. **Strumień Wideo (ESP32-CAM):**
-   * Strumieniowanie obrazu w standardzie MJPEG przez HTTP na porcie `81`.
-   * Obsługa profili płytek: AI Thinker, ESP32-Wrover-Dev oraz LilyGo T-SimCam S3.
-   * Obsługa wątkowości w systemie FreeRTOS (strumień wideo działa w osobnym asynchronicznym wątku przypiętym do rdzenia 0).
+3. **Video Stream (ESP32-CAM):**
+   * Streams MJPEG video frames over HTTP on port `81`.
+   * Integrates built-in camera profiles for AI Thinker, ESP32-Wrover-Dev, and LilyGo T-SimCam S3 boards.
+   * Multi-threaded execution via FreeRTOS (video streaming is isolated to Core 0 to avoid blocking servo commands).
 
-4. **Telemetria IMU:**
-   * Odczyt danych z czujnika MPU6050 (akcelerometr + żyroskop) po szynie I2C.
-   * Wysyłanie telemetrii jako pakietów JSON przez UDP do komputera PC na port `12347`.
+4. **IMU Telemetry:**
+   * Reads sensor data (accelerometer + gyroscope) from the MPU6050 sensor via the I2C bus.
+   * Transmits real-time JSON packets over UDP to the Ground Control Station PC on port `12347`.
 
-5. **Zabezpieczenie Failsafe:**
-   * Watchdog sieciowy: wykrycie utraty połączenia WiFi (dłużej niż 5s) inicjuje próbę automatycznej ponownej konfiguracji i połączenia z AP.
-   * Watchdog sterowania: brak pakietów UDP przez ponad `500 ms` aktywuje funkcję `triggerFailsafe()`, ustawiając wszystkie 16 kanałów w pozycję neutralną (1500 us).
+5. **Failsafe Watchdogs:**
+   * **Network Watchdog:** Detecting a loss of WiFi connection (for >5s) initiates a network reconnection loop back to the AP.
+   * **Control Watchdog:** If UDP control packets stop arriving for more than `500 ms`, the hub triggers `triggerFailsafe()`, instantly resetting all 16 PCA9685 channels to their neutral position (1500 us).
 
-## Schemat Połączeń (Wymagany do Autokalibracji)
+## Wiring Diagram (Required for Autocalibration)
 
-Aby funkcja autokalibracji działała poprawnie, należy fizycznie połączyć:
-* **PCA9685 Kanał 15 (Sygnał PWM - żółty/biały przewód)** -> **ESP32 GPIO 12**
-* Wspólna masa (GND) musi być podłączona pomiędzy ESP32, PCA9685 oraz zasilaniem serw.
+To enable the autocalibration feedback loop, you must connect:
+* **PCA9685 Channel 15 (PWM Signal - yellow/white cable)** -> **ESP32 GPIO 12**
+* Shared ground (GND) must be connected between the ESP32, PCA9685, and the servo power source.
 
-## Konfiguracja I2C
+## I2C Configuration
 
-Urządzenia peryferyjne podłączone są do dedykowanych pinów I2C zależnie od profilu płytki:
-* Np. dla profilu WROVER: `SDA = 13`, `SCL = 14`.
-* Hub posiada wbudowany skaner szyny I2C (`i2c_scan()`), który na starcie systemu wypisuje w terminalu szeregowym (115200 bps) wszystkie wykryte urządzenia (szczególnie poszukując adresów `0x40` dla PCA9685 oraz `0x68` dla IMU).
+Peripherals are connected to specific I2C pins depending on the selected hardware board profile:
+* E.g., for the WROVER profile: `SDA = 13`, `SCL = 14`.
+* The hub runs an I2C address scanner on startup (`i2c_scan()`), logging all detected devices over the serial terminal (115200 bps) and searching for `0x40` (PCA9685) and `0x68` (IMU).
