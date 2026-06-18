@@ -28,9 +28,13 @@ Poniższy schemat przedstawia strukturę przepływu sygnałów i kontroli w zale
 |      Aparatura RC         |                 |    Sterownik PCA9685     |
 |   (np. RadioMaster MT12)  |                 |    (Serwa, Napęd, Lux)   |
 +--------+------------------+                 +--------+---------+--------+
-         |                                                       ^
-         | (Sygnał SBUS / RC)                                    |
-         v                                                       |
+         |                                                       |
+         | (Sygnał PPM)                                          |
+         |                                                       |
+
+
+
+         
 +--------+-------------------------------------------------------+--------+
 |                      [Tier 6 Watchdog & MUX]                            |
 |             Koprocesor Bezpieczeństwa ESP32 (RCSIM HAT)                 |

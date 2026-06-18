@@ -1,6 +1,6 @@
 # RCSIM - Bezprzewodowy Hub Sterowania dla ESP32 z Autokalibracją PCA9685 (V3.2)
 
-Projekt ten stanowi bezprzewodowy koncentrator sterowania i telemetrii (Hub), który łączy w sobie obsługę strumieniowania wideo (MJPEG), telemetrię z czujnika IMU (MPU6050) oraz sterowanie serwami przez sieć za pomocą sterownika PCA9685 z innowacyjną funkcją automatycznej kalibracji sprzętowej.
+Projekt ten stanowi bezprzewodowy koncentrator sterowania i telemetrii (Hub), który łączy w sobie obsługę strumieniowania wideo (MJPEG), telemetrię z czujnika IMU (MPU6050) oraz sterowanie serwami przez sieć za pomocą sterownika PCA9685 z  funkcją automatycznej kalibracji sprzętowej.
 
 ## Funkcje Kluczowe
 

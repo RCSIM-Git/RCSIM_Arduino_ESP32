@@ -1,34 +1,34 @@
-# Poradnik Połączeń: ESP32 RCSIM Hub
+# Wiring Guide: ESP32 RCSIM Hub
 
-Ten przewodnik pomoże Ci poprawnie podłączyć peryferia (serwa, czujniki) do Twojej płytki ESP32.
-
----
-
-## 1. Zasilanie (Bardzo Ważne!)
-
-ESP32-CAM i WROVER są bardzo czułe na spadki napięcia, szczególnie przy włączonym WiFi i Kamerze.
-
-- **ESP32**: Zasilaj pin **5V** stabilnym napięciem 5V (np. z BEC-a lub dobrego zasilacza USB). Unikaj zasilania samej logiki z pinu 3.3V, jeśli używasz kamery.
-- **PCA9685**: Posiada dwa wejścia zasilania:
-    - **VCC/GND (Piny boczne)**: Zasilanie logiki (podłącz do 5V i GND z ESP32).
-    - **V+ Blue Terminal (Zacisk śrubowy)**: Zasilanie serwomechanizmów (podłącz pakiet LiPo lub zewnętrzny zasilacz 5-6V). **Nie zasilaj serw bezpośrednio z ESP32!**
+This guide will help you correctly connect peripherals (servos, sensors) to your ESP32 board.
 
 ---
 
-## 2. Podłączenie I2C (MPU6050 & PCA9685)
+## 1. Power Supply (Very Important!)
 
-Magistrala I2C jest współdzielona. Oba urządzenia (MPU6050 i PCA9685) podłączasz do tych samych pinów ESP32 równolegle.
+ESP32-CAM and WROVER are highly sensitive to voltage drops, especially when WiFi and the Camera are active.
 
-### Profil: AI-Thinker (Standard ESP32-CAM)
-| Funkcja | Pin Urządzenia | Pin ESP32 |
+- **ESP32**: Power the **5V** pin with a stable 5V source (e.g., from a BEC or a good USB power supply). Avoid powering logic from the 3.3V pin if you are using a camera.
+- **PCA9685**: Features two power inputs:
+    - **VCC/GND (Side pins)**: Logic power (connect to 5V and GND on the ESP32).
+    - **V+ Blue Terminal (Screw terminal)**: Servo power (connect a LiPo battery or an external 5-6V power supply). **Do not power servos directly from the ESP32!**
+
+---
+
+## 2. I2C Connection (MPU6050 & PCA9685)
+
+The I2C bus is shared. Connect both devices (MPU6050 and PCA9685) to the same ESP32 pins in parallel.
+
+### Profile: AI-Thinker (Standard ESP32-CAM)
+| Function | Device Pin | ESP32 Pin |
 | :--- | :--- | :--- |
 | **SDA** | SDA | **GPIO 21** |
 | **SCL** | SCL | **GPIO 22** |
 | **GND** | GND | GND |
 | **VCC** | VCC | 5V |
 
-### Profil: ESP32-Wrover-Dev (Freenove / Kit)
-| Funkcja | Pin Urządzenia | Pin ESP32 |
+### Profile: ESP32-Wrover-Dev (Freenove / Kit)
+| Function | Device Pin | ESP32 Pin |
 | :--- | :--- | :--- |
 | **SDA** | SDA | **GPIO 26** |
 | **SCL** | SCL | **GPIO 27** |
@@ -37,31 +37,31 @@ Magistrala I2C jest współdzielona. Oba urządzenia (MPU6050 i PCA9685) podłą
 
 ---
 
-## 3. Sterowanie Serwami (PCA9685)
+## 3. Servo Control (PCA9685)
 
-Serwa wpinasz pionowo w 3-pinowe złącza na PCA9685:
-- **Kolejność (od góry)**: Masa (Czarny/Brązowy) -> Plus (Czerwony) -> Sygnał (Żółty/Biały).
-- **Kanał 0-15**: Zgodnie z tym, co ustawisz w GCS (np. Kanał 0 to zazwyczaj Steering, Kanał 1 to Throttle).
-
----
-
-## 4. Kamera
-
-Kamera OV2640 jest podłączona fabrycznie za pomocą taśmy FPC do gniazda na spodzie płytki. Jeśli masz błąd `Camera init failed`, upewnij się, że taśma jest dociśnięta, a blokada gniazda zamknięta.
+Plug servos vertically into the 3-pin headers on the PCA9685:
+- **Order (from top)**: Ground (Black/Brown) -> Plus (Red) -> Signal (Yellow/White).
+- **Channel 0-15**: Map according to your GCS configuration (e.g., Channel 0 is usually Steering, Channel 1 is Throttle).
 
 ---
 
-## 5. Podsumowanie Pinów (Cheat Sheet)
+## 4. Camera
+
+The OV2640 camera is pre-installed via an FPC ribbon cable to the socket on the underside of the board. If you encounter a `Camera init failed` error, ensure the ribbon cable is seated properly and the socket lock is closed.
+
+---
+
+## 5. Pinout Summary (Cheat Sheet)
 
 ### AI-Thinker ESP32-CAM
 - **I2C**: SDA=21, SCL=22.
-- **Kamera**: Zintegrowana (Piny 32, 0, 26, 27, 35, 34, 39, 36, 21, 19, 18, 5, 25, 23, 22).
-- **Wolne piny**: GPIO 12, 13, 14, 15 (można użyć do dodatkowych czujników, ale uwaga - niektóre są używane przez kartę SD).
+- **Camera**: Integrated (Pins 32, 0, 26, 27, 35, 34, 39, 36, 21, 19, 18, 5, 25, 23, 22).
+- **Unused pins**: GPIO 12, 13, 14, 15 (can be used for additional sensors, but be aware - some are used by the SD card).
 
 ### ESP32-WROVER-DEV
 - **I2C**: SDA=26, SCL=27.
-- **Kamera**: Zintegrowana (XCLK=21).
-- **Wolne piny**: Wrover-Dev ma zazwyczaj wyprowadzone znacznie więcej pinów na bocznych listwach goldpin.
+- **Camera**: Integrated (XCLK=21).
+- **Unused pins**: The Wrover-Dev typically breaks out many more pins on the side goldpin headers.
 
 > [!TIP]
-> Jeśli używasz **ESP32-CAM**, odłącz moduł od programatora USB-TTL po wgraniu kodu, jeśli planujesz zasilać go z zewnętrznego BEC-a, aby uniknąć konfliktów zasilania.
+> If you are using an **ESP32-CAM**, disconnect the module from the USB-TTL programmer after flashing the code if you plan to power it from an external BEC to avoid power source conflicts.
