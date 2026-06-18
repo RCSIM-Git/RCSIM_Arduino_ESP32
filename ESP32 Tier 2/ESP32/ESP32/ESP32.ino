@@ -100,8 +100,8 @@
 #endif
 
 // --- KONFIGURACJA SIECI WiFi ---
-const char* ssid = "BUZEK_AP";        // <- WPISZ SWOJE SSID
-const char* password = "netiabuzek";     // <- WPISZ SWOJE HASŁO
+const char* ssid = "SSID";        // <- WPISZ SWOJE SSID
+const char* password = "password";     // <- WPISZ SWOJE HASŁO
 
 // Konfiguracja STATYCZNEGO ADRESU IP
 // (Musi być zgodny z ustawieniami w GCS tab Konfiguracja)

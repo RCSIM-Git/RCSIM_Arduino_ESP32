@@ -86,8 +86,8 @@
 #endif
 
 // --- KONFIGURACJA SIECI WiFi ---
-const char* ssid = "BUZEK_AP";
-const char* password = "netiabuzek";     
+const char* ssid = "ssid";
+const char* password = "password";     
 
 bool useStaticIP = true;
 IPAddress local_IP(192, 168, 31, 111); 
