@@ -28,9 +28,13 @@ The diagram below illustrates the signal and control flow depending on the activ
 |       RC Transmitter      |                 |    PCA9685 PWM Driver     |
 |   (e.g., RadioMaster MT12)|                 |   (Servos, ESC, Lights)   |
 +--------+------------------+                 +--------+---------+--------+
-         |                                                       ^
-         | (SBUS / RC Signal)                                    |
-         v                                                       |
+         |                                                       
+         | (PPM / RC Signal)                                    
+         |                                                       
+
+
+
+
 +--------+-------------------------------------------------------+--------+
 |                      [Tier 6 Watchdog & MUX]                            |
 |             ESP32 Safety Supervisor (RCSIM HAT)                         |
