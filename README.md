@@ -11,7 +11,7 @@ The diagram below illustrates the signal and control flow depending on the activ
 ```
                   +---------------------------+
                   |    Ground Control GCS     |
-                  |     (PC App / AI Pilot)   |
+                  |          (PC App)         |
                   +-------------+-------------+
                                 |
          +----------------------+----------------------+
