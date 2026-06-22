@@ -53,7 +53,7 @@ The diagram below illustrates the signal and control flow depending on the activ
 ## 🗂️ Module Descriptions (Tiers)
 
 ### 📟 Tier 1: Serial to PPM Converter (Arduino)
-*Location:* `[Arduino Tier 1](file:///c:/Users/Mateusz/Desktop/RCSIM27.04monacoSLAM/RCSIM_PC/pc_app/ESP32Arduino/RCSIM_Arduino_ESP32/Arduino%20Tier%201)`
+*Location:* `[Arduino Tier 1]
 
 A communication bridge converting serial text commands from the GCS into a standard PPM (Pulse Position Modulation) signal.
 *   **Communication:** USB Serial (`115200 bps`), data format: `ch1,ch2,...,ch8\n`.
@@ -64,7 +64,7 @@ A communication bridge converting serial text commands from the GCS into a stand
 ---
 
 ### 🌐 Tier 2: Wireless Control Hub (ESP32)
-*Location:* `[ESP32 Tier 2](file:///c:/Users/Mateusz/Desktop/RCSIM27.04monacoSLAM/RCSIM_PC/pc_app/ESP32Arduino/RCSIM_Arduino_ESP32/ESP32%20Tier%202)`
+*Location:* `[ESP32 Tier 2]`
 
 A feature-rich wireless hub for video streaming, telemetry, and RC servo control over a network.
 *   **PCA9685 Hardware Autocalibration (`calibratePCA9685`):** Utilizes a feedback loop to correct the internal oscillator frequency of the PCA9685. A test 1500 us pulse from PCA9685 channel 15 is routed directly to ESP32 GPIO 12. The ESP32 measures the pulse width using `pulseIn()` and adjusts the PCA9685 oscillator frequency until the error drops below 3 us.
@@ -76,7 +76,7 @@ A feature-rich wireless hub for video streaming, telemetry, and RC servo control
 ---
 
 ### 💡 Arduino Lights: Intelligent RC Light Controller
-*Location:* `[Arduino Lights](file:///c:/Users/Mateusz/Desktop/RCSIM27.04monacoSLAM/RCSIM_PC/pc_app/ESP32Arduino/RCSIM_Arduino_ESP32/Arduino%20Lights)`
+*Location:* `[Arduino Lights]
 
 A smart lighting controller decoding receiver PWM signals to control vehicle LEDs (headlights, brakes, reverse, turn signals).
 *   **Full Mode:** Reacts dynamically to steering (CH1 - turn signals with a 300 ms hysteresis delay), throttle (CH2 - brake lights when stopping/slowing down, automatic reverse lights), and auxiliary switch (CH3 - toggles headlights and roof lights).
@@ -88,7 +88,7 @@ A smart lighting controller decoding receiver PWM signals to control vehicle LED
 ---
 
 ### 🛡️ Tier 6: Hardware Watchdog & SBUS Muxer (ESP32)
-*Location:* `[ESP32 Tier 6 Watchdog for RPi](file:///c:/Users/Mateusz/Desktop/RCSIM27.04monacoSLAM/RCSIM_PC/pc_app/ESP32Arduino/RCSIM_Arduino_ESP32/ESP32%20Tier%206%20Watchdog%20for%20RPi)`
+*Location:* `[ESP32 Tier 6 Watchdog for RPi]
 
 A safety coprocessor (supervisor) supervising the main single-board computer (Raspberry Pi 5).
 *   **Heartbeat Monitor:** Watches for a heartbeat signal from the RPi 5 on pin `PIN_HEARTBEAT` (GPIO 4). A loss of heartbeat for >1000 ms indicates a system crash and triggers the failsafe state.
@@ -117,4 +117,4 @@ A safety coprocessor (supervisor) supervising the main single-board computer (Ra
 
 ## 📄 License
 
-This project is licensed under the **MIT License**. For details, see the [LICENSE](file:///c:/Users/Mateusz/Desktop/RCSIM27.04monacoSLAM/RCSIM_PC/pc_app/ESP32Arduino/RCSIM_Arduino_ESP32/LICENSE) file.
+This project is licensed under the **MIT License**. For details, see the [LICENSE] file.
