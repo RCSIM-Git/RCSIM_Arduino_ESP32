@@ -99,7 +99,7 @@ static void generate_ppm_frame() {
 #endif
         uint32_t pulse_start = time_us_32();
         while (time_us_32() - pulse_start < PPM_PULSE_LENGTH) {
-            __compiler_barrier();
+            __compiler_memory_barrier();
         }
 
         // Stan wysoki (HIGH) - czas trwania kanału
@@ -117,7 +117,7 @@ static void generate_ppm_frame() {
 
         pulse_start = time_us_32();
         while (time_us_32() - pulse_start < high_time) {
-            __compiler_barrier();
+            __compiler_memory_barrier();
         }
     }
 
@@ -129,7 +129,7 @@ static void generate_ppm_frame() {
 #endif
     uint32_t pulse_start = time_us_32();
     while (time_us_32() - pulse_start < PPM_PULSE_LENGTH) {
-        __compiler_barrier();
+        __compiler_memory_barrier();
     }
 
     // Stan wysoki (HIGH) dla przerwy synchronizacyjnej
@@ -143,7 +143,7 @@ static void generate_ppm_frame() {
 
     pulse_start = time_us_32();
     while (time_us_32() - pulse_start < sync_time) {
-        __compiler_barrier();
+        __compiler_memory_barrier();
     }
 
     restore_interrupts(ints);
@@ -265,7 +265,7 @@ void loop1() {
 #else
         gpio_set_dir(PPM_OUT_PIN, GPIO_IN);
 #endif
-        delay(2);
+        sleep_ms(2);
         return;
     }
 
