@@ -117,4 +117,4 @@ A safety coprocessor (supervisor) supervising the main single-board computer (Ra
 
 ## 📄 License
 
-This project is licensed under the **MIT License**. For details, see the [LICENSE] file.
+This project is licensed under the **GPL License**. For details, see the [LICENSE] file.
