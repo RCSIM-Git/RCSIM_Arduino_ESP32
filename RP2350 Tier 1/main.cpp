@@ -242,10 +242,10 @@ void loop() {
     // LED status indicator (active LOW)
     if (failsafe_active || estop_active) {
         // Szybkie miganie przy awarii / braku komunikacji
-        digitalWrite(LED_PIN, (millis() % 200 < 100) ? LOW : HIGH);
+        digitalWrite(LED_PIN, (millis() & 128) ? LOW : HIGH);
     } else {
-        // Wolne miganie przy aktywnej komunikacji
-        digitalWrite(LED_PIN, (millis() % 2000 < 1000) ? LOW : HIGH);
+        // Wolne miganie przy aktywnej komunikacji (optymalizacja bitowa zamiast modulo % 2000)
+        digitalWrite(LED_PIN, (millis() & 1024) ? LOW : HIGH);
     }
 }
 

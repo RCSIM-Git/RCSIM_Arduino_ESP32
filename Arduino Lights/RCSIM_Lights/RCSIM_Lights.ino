@@ -66,7 +66,9 @@ int ch2_val = 1500;
 int ch3_val = 1500;
 
 // Filtry programowe w celu eliminacji szumów (Software Exponential Filter)
-const float filter_beta = 0.3; // Współczynnik wygładzania sygnału
+// Optymalizacja AVR: Wykorzystujemy stałe całkowitoliczbowe zamiast float w celu unikania powolnej emulacji programowej.
+const int filter_num = 3;  // Licznik współczynnika beta (3/10 = 0.3)
+const int filter_den = 10; // Mianownik współczynnika beta
 
 // Ustawienia autokalibracji punktu neutralnego przy starcie
 int ch1_neutral = 1500;
@@ -203,6 +205,19 @@ void setup() {
 void loop() {
   unsigned long now_ms = millis();
   
+  // Zmienne statyczne do optymalizacji czasu bez operacji modulo (%) na AVR
+  static unsigned long last_blink_time = 0;
+  static bool blink_state = false;
+  static unsigned long last_log_failsafe_time = 0;
+  static unsigned long last_log_single_time = 0;
+  static unsigned long last_log_multi_time = 0;
+
+  // Optymalizacja migania: odejmowanie czasu zamiast modulo w pętli głównej
+  if (now_ms - last_blink_time >= BLINK_INTERVAL_MS) {
+    blink_state = !blink_state;
+    last_blink_time = now_ms;
+  }
+  
   // Pobranie danych z sekcji przerwań (atomowo)
   noInterrupts();
   int raw_ch1 = ch1_raw_pulse;
@@ -218,13 +233,10 @@ void loop() {
   bool ch2_active = (now_ms - t_ch2 < FAILSAFE_TIMEOUT);
   bool ch3_active = (now_ms - t_ch3 < FAILSAFE_TIMEOUT);
   
-  // Zastosowanie filtra dolnoprzepustowego (wykładniczego) w celu eliminacji szumów
-  ch1_val = ch1_val + filter_beta * (raw_ch1 - ch1_val);
-  ch2_val = ch2_val + filter_beta * (raw_ch2 - ch2_val);
-  ch3_val = ch3_val + filter_beta * (raw_ch3 - ch3_val);
-  
-  // Stan migania kierunkowskazów (generator fali prostokątnej bezblokujący)
-  bool blink_state = (now_ms % (2 * BLINK_INTERVAL_MS)) < BLINK_INTERVAL_MS;
+  // Zastosowanie filtra dolnoprzepustowego (wykładniczego) w celu eliminacji szumów (arytmetyka całkowitoliczbowa)
+  ch1_val = ch1_val + (raw_ch1 - ch1_val) * filter_num / filter_den;
+  ch2_val = ch2_val + (raw_ch2 - ch2_val) * filter_num / filter_den;
+  ch3_val = ch3_val + (raw_ch3 - ch3_val) * filter_num / filter_den;
   
   // Zmienne wyjściowe dla oświetlenia
   bool headlight_out = false;
@@ -246,8 +258,10 @@ void loop() {
     right_turn_out = blink_state;
     aux_out = false;
     
-    if (DEBUG_MODE && (now_ms % 2000 < 5)) {
+    // Optymalizacja debugowania: eliminacja modulo (%) zapobiega pominięciu wpisu w logach przy wolniejszej pętli
+    if (DEBUG_MODE && (now_ms - last_log_failsafe_time >= 2000)) {
       Serial.println(F("STATUS: [FAILSAFE] No signal on all channels!"));
+      last_log_failsafe_time = now_ms;
     }
   }
   // =================================================================================
@@ -275,10 +289,12 @@ void loop() {
       right_turn_out = false;
     }
     
-    if (DEBUG_MODE && (now_ms % 500 < 5)) {
+    // Optymalizacja debugowania: eliminacja modulo (%) zapobiega pominięciu wpisu w logach przy wolniejszej pętli
+    if (DEBUG_MODE && (now_ms - last_log_single_time >= 500)) {
       Serial.print(F("STATUS: [SINGLE-CHANNEL MUX] CH3 PWM: ")); Serial.print(ch3_val);
       Serial.print(F(" | L: ")); Serial.print(left_turn_out);
       Serial.print(F(" R: ")); Serial.println(right_turn_out);
+      last_log_single_time = now_ms;
     }
   }
   // =================================================================================
@@ -371,10 +387,12 @@ void loop() {
       right_turn_out = false;
     }
     
-    if (DEBUG_MODE && (now_ms % 1000 < 5)) {
+    // Optymalizacja debugowania: eliminacja modulo (%) zapobiega pominięciu wpisu w logach przy wolniejszej pętli
+    if (DEBUG_MODE && (now_ms - last_log_multi_time >= 1000)) {
       Serial.print(F("STATUS: [MULTI-CHANNEL] CH1: ")); Serial.print(ch1_val);
       Serial.print(F(" | CH2: ")); Serial.print(ch2_val);
       Serial.print(F(" | CH3: ")); Serial.println(ch3_val);
+      last_log_multi_time = now_ms;
     }
   }
   

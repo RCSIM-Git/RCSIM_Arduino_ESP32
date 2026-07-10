@@ -75,9 +75,10 @@ void loop() {
     Serial.println("FAILSAFE: Signal Killed.");
   }
 
-  // Heartbeat - Szybkie, wyraźne mruganie diodą LED gdy płyną dane i system jest uzbrojony
+  // Heartbeat - Szybkie, wyraźne mruganie diodą LED gdy płyną dane i system jest uzbrojony.
+  // Optymalizacja AVR: Zastosowano bitowe AND (millis() & 128) zamiast modulo (%) w celu unikania powolnego dzielenia.
   if (!failsafeActive && !estopActive) {
-    if (millis() % 200 < 100) {
+    if ((millis() & 128) == 0) {
       digitalWrite(LED_PIN, HIGH);
     } else {
       digitalWrite(LED_PIN, LOW);
