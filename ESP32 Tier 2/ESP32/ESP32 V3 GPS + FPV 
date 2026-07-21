@@ -1,6 +1,6 @@
 /*
  * =================================================================================
- * RCSIM - Bezprzewodowy Hub Sterowania dla ESP32 (V3.3 - Full OSD & GPS Edition)
+ * RCSIM - Bezprzewodowy Hub Sterowania dla ESP32 (V3 - Full OSD & GPS Edition)
  * =================================================================================
  * Polaczenia Walksnail VTX:
  *   ESP32 GPIO 2  (TX2) -> Walksnail RX
