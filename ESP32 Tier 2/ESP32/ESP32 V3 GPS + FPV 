@@ -1,0 +1,583 @@
+/*
+ * =================================================================================
+ * RCSIM - Bezprzewodowy Hub Sterowania dla ESP32 (V3.3 - Full OSD & GPS Edition)
+ * =================================================================================
+ * Polaczenia Walksnail VTX:
+ *   ESP32 GPIO 2  (TX2) -> Walksnail RX
+ *   ESP32 GPIO 15 (RX2) -> Walksnail TX
+ *
+ * Polaczenia GPS (NMEA):
+ *   ESP32 GPIO 32 (RX1) <- GPS TX
+ *
+ * Polaczenie Pomiaru Napiecia (Dzielnik 10k / 2.2k):
+ *   ESP32 GPIO 33 (ADC1) <- Wezel Dzielnika
+ * =================================================================================
+ */
+
+// --- GLOWNE PRZELACZNIKI FUNKCJI ---
+#define ENABLE_CAMERA                true   // Strumien wideo MJPEG
+#define ENABLE_IMU                   true   // MPU6050 po I2C
+#define ENABLE_PCA_AUTOCALIBRATION   true   // Sprzezenie zwrotne PCA9685 przy starcie
+#define ENABLE_WALKSNAIL_OSD         true   // Wysylanie ramek MSP do gogli Walksnail
+#define ENABLE_BATTERY               true   // Odczyt napiecia z pinu ADC1
+#define ENABLE_GPS                   true   // Odczyt danych z GPS (TinyGPS++)
+
+// --- KONFIGURACJA AUTOKALIBRACJI PCA9685 ---
+#define CALIBRATION_CH 15               // Kanal PCA9685 do testowego sygnalu
+#define CALIBRATION_PIN 12              // PIN ESP32 podlaczony do CH15 PCA9685
+
+// --- WYBOR PROFILU SPRZETOWEGO ---
+//#define BOARD_AI_THINKER  
+#define BOARD_WROVER_DEV  
+//#define LILYGO_TSIMCAM_S3    
+
+// --- DEFINICJE PINOW DLA PROFILI ---
+#ifdef BOARD_WROVER_DEV
+  #define PWDN_GPIO_NUM     -1
+  #define RESET_GPIO_NUM    -1
+  #define XCLK_GPIO_NUM     21
+  #define SIOD_GPIO_NUM     26
+  #define SIOC_GPIO_NUM     27
+  #define Y9_GPIO_NUM       35
+  #define Y8_GPIO_NUM       34
+  #define Y7_GPIO_NUM       39
+  #define Y6_GPIO_NUM       36
+  #define Y5_GPIO_NUM       19
+  #define Y4_GPIO_NUM       18
+  #define Y3_GPIO_NUM        5
+  #define Y2_GPIO_NUM        4
+  #define VSYNC_GPIO_NUM    25
+  #define HREF_GPIO_NUM     23
+  #define PCLK_GPIO_NUM     22
+  #define I2C_SDA_PIN       13
+  #define I2C_SCL_PIN       14
+  #define XCLK_FREQ         20000000  
+#endif
+
+// --- KONFIGURACJA PRIPHERIALS & UART ---
+#define VBAT_PIN            33    // GPIO 33 (ADC1 - bezpieczny przy Wi-Fi)
+#define GPS_RX_PIN          32    // ESP32 RX1 <- GPS TX
+#define GPS_TX_PIN          -1    // Tylko odczyt NMEA
+#define GPS_BAUD            9600  // Domyślna prędkość dla modułów u-blox
+
+#define WALKSNAIL_TX_PIN    2     // ESP32 TX2 -> Walksnail RX
+#define WALKSNAIL_RX_PIN    15    // ESP32 RX2 -> Walksnail TX
+#define WALKSNAIL_BAUD      115200
+
+// --- KONFIGURACJA SIECI WiFi ---
+const char* ssid = "ssid";
+const char* password = "password";     
+
+bool useStaticIP = true;
+IPAddress local_IP(192, 168, 31, 111); 
+IPAddress gateway(192, 168, 31, 1);
+IPAddress subnet(255, 255, 255, 0);
+IPAddress primaryDNS(8, 8, 8, 8);
+IPAddress secondaryDNS(8, 8, 4, 4); 
+
+const int UDP_LISTEN_PORT   = 12345;
+const int PC_TELEMETRY_PORT = 12347;    
+const int VIDEO_SERVER_PORT = 81;
+
+#define NUM_CHANNELS        16
+#define SERVO_FREQUENCY     50
+#define FAILSAFE_TIMEOUT_MS 500
+#define NEUTRAL_PULSE       1500
+
+// --- BIBLIOTEKI ---
+#include <WiFi.h>
+#include <WiFiUdp.h>
+#include <Wire.h>
+#include <Adafruit_PWMServoDriver.h>
+
+#if ENABLE_IMU
+#include <MPU6050_light.h>
+#endif
+
+#if ENABLE_CAMERA
+#include "esp_camera.h"
+#endif
+
+#if ENABLE_GPS
+#include <TinyGPS++.h>
+#endif
+
+// --- OBIEKTY SPRZETOWE I PROTOKOLOW ---
+WiFiUDP udp;
+Adafruit_PWMServoDriver pca = Adafruit_PWMServoDriver();
+
+#if ENABLE_IMU
+MPU6050 mpu(Wire);
+#endif
+
+#if ENABLE_CAMERA
+WiFiServer videoServer(VIDEO_SERVER_PORT);
+#endif
+
+#if ENABLE_GPS
+HardwareSerial GpsSerial(1);
+TinyGPSPlus gps;
+#endif
+
+#if ENABLE_WALKSNAIL_OSD
+HardwareSerial VtxSerial(2);
+#endif
+
+// --- ZMIENNE GLOBALNE ---
+unsigned long lastPacketTime = 0;
+bool failsafeActive = true;
+IPAddress pcIP; 
+
+// Dzielnik napięcia (R1 = 10k, R2 = 2.2k)
+const float R1 = 10000.0f;
+const float R2 = 2200.0f;
+const float DIVIDER_RATIO = (R1 + R2) / R2; // ~5.545
+
+// =================================================================================
+// FUNKCJE POMOCNICZE MSP (WALKSNAIL OSD)
+// =================================================================================
+#if ENABLE_WALKSNAIL_OSD
+void sendMSP(uint8_t cmd, uint8_t *payload, uint8_t size) {
+  uint8_t checksum = 0;
+  VtxSerial.write('$');
+  VtxSerial.write('M');
+  VtxSerial.write('<');
+  VtxSerial.write(size);
+  checksum ^= size;
+  VtxSerial.write(cmd);
+  checksum ^= cmd;
+  
+  for (uint8_t i = 0; i < size; i++) {
+    VtxSerial.write(payload[i]);
+    checksum ^= payload[i];
+  }
+  VtxSerial.write(checksum);
+}
+
+void sendWalksnailAttitude(float roll, float pitch, float yaw) {
+  int16_t r = (int16_t)(roll * 10.0f);
+  int16_t p = (int16_t)(pitch * 10.0f);
+  int16_t y = (int16_t)yaw;
+
+  uint8_t payload[6];
+  payload[0] = r & 0xFF; payload[1] = (r >> 8) & 0xFF;
+  payload[2] = p & 0xFF; payload[3] = (p >> 8) & 0xFF;
+  payload[4] = y & 0xFF; payload[5] = (y >> 8) & 0xFF;
+
+  sendMSP(108, payload, 6); // Cmd 108 = MSP_ATTITUDE
+}
+
+void sendWalksnailAnalog(float voltage, uint16_t rssi) {
+  uint8_t vbat = (uint8_t)(voltage * 10.0f);
+  uint16_t powerMeter = 0;
+  int16_t amperage = 0;
+
+  uint8_t payload[7];
+  payload[0] = vbat;
+  payload[1] = powerMeter & 0xFF; payload[2] = (powerMeter >> 8) & 0xFF;
+  payload[3] = rssi & 0xFF;       payload[4] = (rssi >> 8) & 0xFF;
+  payload[5] = amperage & 0xFF;   payload[6] = (amperage >> 8) & 0xFF;
+
+  sendMSP(110, payload, 7); // Cmd 110 = MSP_ANALOG
+}
+
+void sendWalksnailStatus(bool isArmed) {
+  uint16_t cycleTime = 1000;
+  uint16_t i2cErrorCounter = 0;
+  uint16_t sensor = 0x07; 
+  uint32_t flightModeFlags = isArmed ? 0x00000001 : 0x00000000; 
+
+  uint8_t payload[11];
+  payload[0] = cycleTime & 0xFF;       payload[1] = (cycleTime >> 8) & 0xFF;
+  payload[2] = i2cErrorCounter & 0xFF; payload[3] = (i2cErrorCounter >> 8) & 0xFF;
+  payload[4] = sensor & 0xFF;          payload[5] = (sensor >> 8) & 0xFF;
+  payload[6] = flightModeFlags & 0xFF; payload[7] = (flightModeFlags >> 8) & 0xFF;
+  payload[8] = (flightModeFlags >> 16) & 0xFF; payload[9] = (flightModeFlags >> 24) & 0xFF;
+  payload[10] = 0;
+
+  sendMSP(101, payload, 11); // Cmd 101 = MSP_STATUS
+}
+
+void sendWalksnailName(const char* name) {
+  uint8_t len = strlen(name);
+  if (len > 16) len = 16;
+  sendMSP(10, (uint8_t*)name, len); // Cmd 10 = MSP_NAME
+}
+
+#if ENABLE_GPS
+void sendWalksnailGPS() {
+  uint8_t fix = (gps.satellites.value() >= 4) ? 2 : 0;
+  uint8_t numSat = gps.satellites.value();
+  int32_t lat = (int32_t)(gps.location.lat() * 10000000.0);
+  int32_t lon = (int32_t)(gps.location.lng() * 10000000.0);
+  uint16_t alt = (uint16_t)gps.altitude.meters();
+  uint16_t speed = (uint16_t)(gps.speed.mps() * 100.0f);  
+  uint16_t course = (uint16_t)(gps.course.deg() * 10.0f); 
+
+  uint8_t payload[16];
+  payload[0]  = fix; payload[1] = numSat;
+  payload[2]  = lat & 0xFF; payload[3]  = (lat >> 8) & 0xFF;
+  payload[4]  = (lat >> 16) & 0xFF; payload[5]  = (lat >> 24) & 0xFF;
+  payload[6]  = lon & 0xFF; payload[7]  = (lon >> 8) & 0xFF;
+  payload[8]  = (lon >> 16) & 0xFF; payload[9]  = (lon >> 24) & 0xFF;
+  payload[10] = alt & 0xFF; payload[11] = (alt >> 8) & 0xFF;
+  payload[12] = speed & 0xFF; payload[13] = (speed >> 8) & 0xFF;
+  payload[14] = course & 0xFF; payload[15] = (course >> 8) & 0xFF;
+
+  sendMSP(106, payload, 16); // Cmd 106 = MSP_RAW_GPS
+}
+#endif
+#endif
+
+// =================================================================================
+// FUNKCJE POMOCNICZE HARDWARE
+// =================================================================================
+float readBatteryVoltage() {
+#if ENABLE_BATTERY
+  uint32_t rawSum = 0;
+  const int samples = 16;
+  for (int i = 0; i < samples; i++) {
+    rawSum += analogReadMilliVolts(VBAT_PIN);
+  }
+  float pinVoltage = ((float)rawSum / (float)samples) / 1000.0f;
+  return pinVoltage * DIVIDER_RATIO;
+#else
+  return 0.0f;
+#endif
+}
+
+uint16_t getWifiRssiForMSP() {
+  if (WiFi.status() != WL_CONNECTED) return 0;
+  int dbm = WiFi.RSSI();
+  int quality = constrain(map(dbm, -90, -30, 0, 100), 0, 100);
+  return map(quality, 0, 100, 0, 1023);
+}
+
+void calibratePCA9685() {
+  Serial.println("\n--- Rozpoczynam autokalibrację PCA9685 ---");
+  pinMode(CALIBRATION_PIN, INPUT);
+
+  uint32_t currentFreq = 25000000;
+  pca.setOscillatorFrequency(currentFreq);
+  pca.setPWMFreq(SERVO_FREQUENCY);
+
+  int targetUs = 1500;
+  int error = 1000;
+  int attempts = 0;
+
+  pca.setPWM(CALIBRATION_CH, 0, 307);
+  delay(100);
+
+  while (abs(error) > 3 && attempts < 15) {
+    unsigned long measuredUs = pulseIn(CALIBRATION_PIN, HIGH, 100000);
+
+    if (measuredUs == 0) {
+      Serial.println("BŁĄD: Brak sygnału na pinie kalibracyjnym! Sprawdź połączenie.");
+      break;
+    }
+
+    error = targetUs - (int)measuredUs;
+    Serial.printf("Próba %d: Zmierzono %lu us | Błąd: %d us\n", attempts + 1, measuredUs, error);
+
+    if (abs(error) <= 3) {
+      Serial.println("Kalibracja ZAKOŃCZONA SUKCESEM!");
+      break;
+    }
+
+    currentFreq = (uint32_t)(currentFreq * ((float)targetUs / (float)measuredUs));
+    pca.setOscillatorFrequency(currentFreq);
+    pca.setPWMFreq(SERVO_FREQUENCY);
+    pca.setPWM(CALIBRATION_CH, 0, 307);
+    delay(50); 
+    attempts++;
+  }
+  Serial.printf("Ostateczna częstotliwość oscylatora: %lu Hz\n\n", currentFreq);
+}
+
+void triggerFailsafe() {
+  for (int i = 0; i < NUM_CHANNELS; i++) {
+    uint16_t pwm_ticks = (NEUTRAL_PULSE * 4096UL) / (1000000UL / SERVO_FREQUENCY);
+    pca.setPWM(i, 0, pwm_ticks);
+  }
+  failsafeActive = true;
+}
+
+void i2c_scan() {
+  byte error, address;
+  int nDevices = 0;
+  Serial.println("Skanowanie magistrali I2C...");
+  for(address = 1; address < 127; address++) {
+    Wire.beginTransmission(address);
+    error = Wire.endTransmission();
+    if (error == 0) {
+      Serial.printf("Znaleziono urządzenie I2C pod adresem 0x%02X\n", address);
+      nDevices++;
+    }
+  }
+  if (nDevices == 0) Serial.println("Nie znaleziono żadnych urządzeń I2C!\n");
+}
+
+#if ENABLE_CAMERA
+void videoTask(void *pvParameters) {
+  while (true) {
+    WiFiClient client = videoServer.available();
+    if (client) {
+      client.setNoDelay(true);
+      client.println("HTTP/1.1 200 OK");
+      client.println("Content-Type: multipart/x-mixed-replace; boundary=frame");
+      client.println();
+      while (client.connected()) {
+        camera_fb_t *fb = esp_camera_fb_get();
+        if (!fb) { vTaskDelay(pdMS_TO_TICKS(10)); continue; }
+
+        client.printf("--frame\r\nContent-Type: image/jpeg\r\nContent-Length: %u\r\n\r\n", fb->len);
+        client.write(fb->buf, fb->len);
+        client.print("\r\n");
+        esp_camera_fb_return(fb);
+        vTaskDelay(pdMS_TO_TICKS(1)); 
+      }
+      client.stop();
+    }
+    vTaskDelay(pdMS_TO_TICKS(100));
+  }
+}
+#endif
+
+// =================================================================================
+// INICJALIZACJA SYSTEMU (SETUP)
+// =================================================================================
+void setup() {
+  Serial.begin(115200);
+  Serial.println("\n\n--- RCSIM ESP32 Hub V3.3 FULL ---");
+
+  // 1. Inicjalizacja Wi-Fi
+  if (useStaticIP) {
+    WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS);
+  }
+  WiFi.begin(ssid, password);
+  Serial.print("Łączenie z WiFi...");
+  int retry = 0;
+  while (WiFi.status() != WL_CONNECTED && retry < 20) { delay(500); Serial.print("."); retry++; }
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nPołączono! IP: " + WiFi.localIP().toString());
+  }
+
+  // 2. Inicjalizacja ADC (Pomiar Napięcia)
+  #if ENABLE_BATTERY
+  analogReadResolution(12);
+  pinMode(VBAT_PIN, INPUT);
+  #endif
+
+  // 3. I2C + PCA9685
+  Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
+  i2c_scan();
+
+  pca.begin();
+  #if ENABLE_PCA_AUTOCALIBRATION
+    calibratePCA9685();
+  #else
+    pca.setPWMFreq(SERVO_FREQUENCY);
+  #endif
+  triggerFailsafe();
+
+  // 4. IMU
+  #if ENABLE_IMU
+  if (mpu.begin() == 0) {
+    Serial.println("IMU MPU6050 Gotowe.");
+    mpu.calcOffsets();
+  } else {
+    Serial.println("Błąd inicjalizacji IMU!");
+  }
+  #endif
+
+  // 5. GPS UART
+  #if ENABLE_GPS
+  GpsSerial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+  Serial.println("GPS UART Gotowy.");
+  #endif
+
+  // 6. Walksnail OSD UART
+  #if ENABLE_WALKSNAIL_OSD
+  VtxSerial.begin(WALKSNAIL_BAUD, SERIAL_8N1, WALKSNAIL_RX_PIN, WALKSNAIL_TX_PIN);
+  Serial.println("Walksnail MSP OSD UART Gotowy.");
+  #endif
+
+  // 7. Kamera
+  #if ENABLE_CAMERA
+  camera_config_t config;
+  config.ledc_channel = LEDC_CHANNEL_0;
+  config.ledc_timer   = LEDC_TIMER_0;
+  config.pin_d0       = Y2_GPIO_NUM;
+  config.pin_d1       = Y3_GPIO_NUM;
+  config.pin_d2       = Y4_GPIO_NUM;
+  config.pin_d3       = Y5_GPIO_NUM;
+  config.pin_d4       = Y6_GPIO_NUM;
+  config.pin_d5       = Y7_GPIO_NUM;
+  config.pin_d6       = Y8_GPIO_NUM;
+  config.pin_d7       = Y9_GPIO_NUM;
+  config.pin_xclk     = XCLK_GPIO_NUM;
+  config.pin_pclk     = PCLK_GPIO_NUM;
+  config.pin_vsync    = VSYNC_GPIO_NUM;
+  config.pin_href     = HREF_GPIO_NUM;
+  config.pin_sccb_sda = SIOD_GPIO_NUM;
+  config.pin_sccb_scl = SIOC_GPIO_NUM;
+  config.pin_pwdn     = PWDN_GPIO_NUM;
+  config.pin_reset    = RESET_GPIO_NUM;
+  config.xclk_freq_hz = XCLK_FREQ;
+  config.pixel_format = PIXFORMAT_JPEG;
+  config.frame_size   = FRAMESIZE_VGA;
+  config.jpeg_quality = 15;
+  config.fb_count     = 2;
+  config.grab_mode    = CAMERA_GRAB_LATEST;
+  config.fb_location  = CAMERA_FB_IN_PSRAM;
+
+  delay(500);
+  esp_err_t err = esp_camera_init(&config);
+  if (err == ESP_OK) {
+    videoServer.begin();
+    xTaskCreatePinnedToCore(videoTask, "videoTask", 4096, NULL, 1, NULL, 0);
+    Serial.println("Kamera OK. Strumień: http://IP:81/stream");
+  } else {
+    Serial.printf("Błąd kamery: 0x%x\n", err);
+  }
+  #endif
+
+  udp.begin(UDP_LISTEN_PORT);
+}
+
+// =================================================================================
+// PETLA GLOWNA (LOOP)
+// =================================================================================
+void loop() {
+  // 1. Watchdog Wi-Fi
+  static unsigned long lastWifiCheck = 0;
+  if (WiFi.status() != WL_CONNECTED && (millis() - lastWifiCheck > 5000)) {
+    Serial.println("Utracono Wi-Fi. Próba ponownego połączenia...");
+    WiFi.disconnect();
+    WiFi.begin(ssid, password);
+    lastWifiCheck = millis();
+  }
+
+  // 2. Parsowanie GPS
+  #if ENABLE_GPS
+  while (GpsSerial.available() > 0) {
+    gps.encode(GpsSerial.read());
+  }
+  #endif
+
+  // 3. Sterowanie UDP z PC
+  int packetSize = udp.parsePacket();
+  if (packetSize) {
+    char buf[256];
+    int len = udp.read(buf, 255);
+    if (len > 0) {
+      buf[len] = '\0';
+      pcIP = udp.remoteIP();
+      int ch = 0;
+      char* t = strtok(buf, ",");
+      while (t != NULL && ch < NUM_CHANNELS) {
+        int parsedVal = atoi(t);
+        if (parsedVal >= 800 && parsedVal <= 2200) {
+          int us = constrain(parsedVal, 1000, 2000);
+          uint16_t pwm_ticks = (us * 4096UL) / (1000000UL / SERVO_FREQUENCY);
+          pca.setPWM(ch, 0, pwm_ticks);
+        }
+        t = strtok(NULL, ",");
+        ch++;
+      }
+      lastPacketTime = millis();
+      if (failsafeActive) {
+        failsafeActive = false;
+        Serial.println("Link sterowania OK.");
+      }
+    }
+  }
+
+  // 4. Obsługa Failsafe
+  if (!failsafeActive && (millis() - lastPacketTime > FAILSAFE_TIMEOUT_MS)) {
+    Serial.println("FAILSAFE!");
+    triggerFailsafe();
+  }
+
+  // 5. Telemetria UDP do PC + MSP_ATTITUDE do Walksnail (Szybka pętla 20 Hz / 50 ms)
+  static unsigned long lastTelem = 0;
+  if (millis() - lastTelem > 50) {
+    lastTelem = millis();
+
+    #if ENABLE_IMU
+    mpu.update();
+
+    #if ENABLE_WALKSNAIL_OSD
+    sendWalksnailAttitude(mpu.getAngleX(), mpu.getAngleY(), mpu.getAngleZ());
+    #endif
+    #endif
+
+    // Przygotowanie GPS do pakietu UDP
+    bool gpsValid = false;
+    double lat = 0.0, lng = 0.0;
+    float alt = 0.0f, speedKmph = 0.0f;
+    uint32_t sats = 0;
+
+    #if ENABLE_GPS
+    gpsValid = gps.location.isValid();
+    if (gpsValid) {
+      lat = gps.location.lat();
+      lng = gps.location.lng();
+    }
+    if (gps.altitude.isValid())   alt = gps.altitude.meters();
+    if (gps.speed.isValid())      speedKmph = gps.speed.kmph();
+    if (gps.satellites.isValid()) sats = gps.satellites.value();
+    #endif
+
+    char j[384];
+    snprintf(j, sizeof(j),
+      "{"
+        "\"imu\":{\"ax\":%.2f,\"ay\":%.2f,\"az\":%.2f,\"gx\":%.2f,\"gy\":%.2f,\"gz\":%.2f},"
+        "\"gps\":{\"valid\":%s,\"lat\":%.6f,\"lng\":%.6f,\"alt\":%.1f,\"speed\":%.1f,\"sats\":%u},"
+        "\"vbat\":%.2f,"
+        "\"rssi\":%d"
+      "}",
+      #if ENABLE_IMU
+      mpu.getAccX(), mpu.getAccY(), mpu.getAccZ(), mpu.getGyroX(), mpu.getGyroY(), mpu.getGyroZ(),
+      #else
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      #endif
+      gpsValid ? "true" : "false", lat, lng, alt, speedKmph, sats,
+      readBatteryVoltage(),
+      WiFi.RSSI()
+    );
+
+    if (pcIP) {
+      udp.beginPacket(pcIP, PC_TELEMETRY_PORT);
+      udp.write((uint8_t*)j, strlen(j));
+      udp.endPacket();
+    }
+  }
+
+  // 6. Odświeżanie OSD Walksnail: Analog (VBat+RSSI), Status (ARM), RAW_GPS (Sformatowana pętla 5 Hz / 200 ms)
+  #if ENABLE_WALKSNAIL_OSD
+  static unsigned long lastOsdFast = 0;
+  if (millis() - lastOsdFast > 200) {
+    lastOsdFast = millis();
+
+    float vbat = readBatteryVoltage();
+    uint16_t mspRssi = getWifiRssiForMSP();
+
+    sendWalksnailAnalog(vbat, mspRssi);
+    sendWalksnailStatus(!failsafeActive); // ARMED gdy brak Failsafe
+
+    #if ENABLE_GPS
+    if (gps.location.isValid()) {
+      sendWalksnailGPS();
+    }
+    #endif
+  }
+
+  // 7. Odświeżanie OSD Walksnail: Nazwa Modelu (Pętla wolna 0.5 Hz / 2000 ms)
+  static unsigned long lastOsdSlow = 0;
+  if (millis() - lastOsdSlow > 2000) {
+    lastOsdSlow = millis();
+    sendWalksnailName("RCSIM V3.3");
+  }
+  #endif
+}
