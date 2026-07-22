@@ -16,7 +16,14 @@
 
 // --- GLOWNE PRZELACZNIKI FUNKCJI ---
 #define ENABLE_CAMERA                true   // Strumien wideo MJPEG
-#define ENABLE_IMU                   true   // MPU6050 po I2C
+#define ENABLE_IMU                   true   // Obsługa czujnika bezwładnościowego (IMU)
+#define IMU_TYPE_MPU6050             1
+#define IMU_TYPE_MPU9250             2      // GY-91, MPU9250
+#define IMU_TYPE_BNO08X              3      // BNO080/085 (sprzętowa fuzja)
+#define IMU_TYPE_BMX160              4      // Bosch 9-osiowy
+
+#define ACTIVE_IMU                   IMU_TYPE_MPU6050 // Wybrany aktywny czujnik
+
 #define ENABLE_PCA_AUTOCALIBRATION   true   // Sprzezenie zwrotne PCA9685 przy starcie
 #define ENABLE_WALKSNAIL_OSD         true   // Wysylanie ramek MSP do gogli Walksnail
 #define ENABLE_BATTERY               true   // Odczyt napiecia z pinu ADC1
@@ -84,15 +91,14 @@ const int VIDEO_SERVER_PORT = 81;
 #define FAILSAFE_TIMEOUT_MS 500
 #define NEUTRAL_PULSE       1500
 
+#define WDT_TIMEOUT_SEC      2
+
 // --- BIBLIOTEKI ---
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
-
-#if ENABLE_IMU
-#include <MPU6050_light.h>
-#endif
+#include <esp_task_wdt.h>
 
 #if ENABLE_CAMERA
 #include "esp_camera.h"
@@ -106,12 +112,142 @@ const int VIDEO_SERVER_PORT = 81;
 WiFiUDP udp;
 Adafruit_PWMServoDriver pca = Adafruit_PWMServoDriver();
 
-#if ENABLE_IMU
-MPU6050 mpu(Wire);
-#endif
-
 #if ENABLE_CAMERA
 WiFiServer videoServer(VIDEO_SERVER_PORT);
+#endif
+
+// =================================================================================
+// UNIWERSALNA WARSTWA ABSTRAKCJI IMU
+// =================================================================================
+#if ENABLE_IMU
+
+// --- 1. NAGŁÓWKI DLA WYBRANEGO CZUJNIKA ---
+#if (ACTIVE_IMU == IMU_TYPE_MPU6050)
+  #include <MPU6050_light.h>
+  MPU6050 mpu(Wire);
+
+#elif (ACTIVE_IMU == IMU_TYPE_MPU9250)
+  #include <MPU9250_WE.h>
+  #define MPU9250_ADDR 0x68
+  MPU9250_WE mpu = MPU9250_WE(MPU9250_ADDR);
+
+#elif (ACTIVE_IMU == IMU_TYPE_BNO08X)
+  #include <Adafruit_BNO08x.h>
+  Adafruit_BNO08x bno08x;
+  sh2_SensorValue_t sensorValue;
+
+#elif (ACTIVE_IMU == IMU_TYPE_BMX160)
+  #include <DFRobot_BMX160.h>
+  DFRobot_BMX160 bmx160(&Wire);
+#endif
+
+// Znormalizowane zmienne telemetrii IMU
+float imu_roll  = 0.0f, imu_pitch = 0.0f, imu_yaw   = 0.0f;
+float imu_ax    = 0.0f, imu_ay    = 0.0f, imu_az    = 0.0f;
+float imu_gx    = 0.0f, imu_gy    = 0.0f, imu_gz    = 0.0f; // Zachowujemy kompatybilność z polami gyro w JSON
+
+// --- 2. UNIWERSALNA INICJALIZACJA ---
+bool initIMU() {
+#if (ACTIVE_IMU == IMU_TYPE_MPU6050)
+  if (mpu.begin() == 0) {
+    mpu.calcOffsets();
+    configureMPU6050DLPF(); // Ustawienie sprzętowego filtra DLPF
+    return true;
+  }
+  return false;
+
+#elif (ACTIVE_IMU == IMU_TYPE_MPU9250)
+  if (mpu.init()) {
+    mpu.autoOffsets();
+    mpu.setSampleRate(MPU9250_SR_200Hz);
+    mpu.setDlpfer(MPU9250_DLPF_6); // DLPF ~42Hz
+    return true;
+  }
+  return false;
+
+#elif (ACTIVE_IMU == IMU_TYPE_BNO08X)
+  if (bno08x.begin_I2C()) {
+    bno08x.enableReport(SH2_ARVR_STABILIZED_ROTATION_VECTOR, 20000); // 50Hz (20000us)
+    bno08x.enableReport(SH2_ACCELEROMETER, 20000);
+    bno08x.enableReport(SH2_GYROSCOPE_CALIBRATED, 20000);
+    return true;
+  }
+  return false;
+
+#elif (ACTIVE_IMU == IMU_TYPE_BMX160)
+  if (bmx160.begin()) {
+    return true;
+  }
+  return false;
+#endif
+}
+
+// --- 3. UNIWERSALNE POBIERANIE DANYCH (UPDATE) ---
+void updateIMU() {
+#if (ACTIVE_IMU == IMU_TYPE_MPU6050)
+  mpu.update();
+  imu_roll  = mpu.getAngleX();
+  imu_pitch = mpu.getAngleY();
+  imu_yaw   = mpu.getAngleZ();
+  imu_ax    = mpu.getAccX();
+  imu_ay    = mpu.getAccY();
+  imu_az    = mpu.getAccZ();
+  imu_gx    = mpu.getGyroX();
+  imu_gy    = mpu.getGyroY();
+  imu_gz    = mpu.getGyroZ();
+
+#elif (ACTIVE_IMU == IMU_TYPE_MPU9250)
+  xyzFloat gAcc = mpu.getGValues();
+  xyzFloat angles = mpu.getAngles();
+  xyzFloat gyro = mpu.getGyroValues();
+  imu_roll  = angles.x;
+  imu_pitch = angles.y;
+  imu_yaw   = angles.z;
+  imu_ax    = gAcc.x;
+  imu_ay    = gAcc.y;
+  imu_az    = gAcc.z;
+  imu_gx    = gyro.x;
+  imu_gy    = gyro.y;
+  imu_gz    = gyro.z;
+
+#elif (ACTIVE_IMU == IMU_TYPE_BNO08X)
+  if (bno08x.getSensorEvent(&sensorValue)) {
+    if (sensorValue.sensorId == SH2_ARVR_STABILIZED_ROTATION_VECTOR) {
+      float qr = sensorValue.un.arvrStabilizedRotationVector.real;
+      float qi = sensorValue.un.arvrStabilizedRotationVector.i;
+      float qj = sensorValue.un.arvrStabilizedRotationVector.j;
+      float qk = sensorValue.un.arvrStabilizedRotationVector.k;
+
+      imu_roll  = atan2(2.0f * (qr * qi + qj * qk), 1.0f - 2.0f * (qi * qi + qj * qj)) * RAD_TO_DEG;
+      imu_pitch = asin(constrain(2.0f * (qr * qj - qk * qi), -1.0f, 1.0f)) * RAD_TO_DEG;
+      imu_yaw   = atan2(2.0f * (qr * qk + qi * qj), 1.0f - 2.0f * (qj * qj + qk * qk)) * RAD_TO_DEG;
+    }
+    if (sensorValue.sensorId == SH2_ACCELEROMETER) {
+      imu_ax = sensorValue.un.accelerometer.x / 9.81f;
+      imu_ay = sensorValue.un.accelerometer.y / 9.81f;
+      imu_az = sensorValue.un.accelerometer.z / 9.81f;
+    }
+    if (sensorValue.sensorId == SH2_GYROSCOPE_CALIBRATED) {
+      imu_gx = sensorValue.un.gyroscope.x * RAD_TO_DEG; // rad/s na deg/s
+      imu_gy = sensorValue.un.gyroscope.y * RAD_TO_DEG;
+      imu_gz = sensorValue.un.gyroscope.z * RAD_TO_DEG;
+    }
+  }
+
+#elif (ACTIVE_IMU == IMU_TYPE_BMX160)
+  sBmx160SensorData_t Omagn, Ogyro, Oacc;
+  bmx160.getAllData(&Omagn, &Ogyro, &Oacc);
+  imu_ax = Oacc.x / 9.81f;
+  imu_ay = Oacc.y / 9.81f;
+  imu_az = Oacc.z / 9.81f;
+  imu_gx = Ogyro.x * RAD_TO_DEG;
+  imu_gy = Ogyro.y * RAD_TO_DEG;
+  imu_gz = Ogyro.z * RAD_TO_DEG;
+  imu_roll  = atan2(imu_ay, imu_az) * RAD_TO_DEG;
+  imu_pitch = atan2(-imu_ax, sqrt(imu_ay * imu_ay + imu_az * imu_az)) * RAD_TO_DEG;
+#endif
+}
+
 #endif
 
 #if ENABLE_GPS
@@ -234,17 +370,40 @@ void sendWalksnailGPS() {
 // =================================================================================
 float readBatteryVoltage() {
 #if ENABLE_BATTERY
-  uint32_t rawSum = 0;
-  const int samples = 16;
-  for (int i = 0; i < samples; i++) {
-    rawSum += analogReadMilliVolts(VBAT_PIN);
+  static float filteredVoltage = 0.0f;
+  float rawVoltage = (analogReadMilliVolts(VBAT_PIN) / 1000.0f) * DIVIDER_RATIO;
+  if (filteredVoltage == 0.0f) {
+    filteredVoltage = rawVoltage;
   }
-  float pinVoltage = ((float)rawSum / (float)samples) / 1000.0f;
-  return pinVoltage * DIVIDER_RATIO;
+  filteredVoltage = (filteredVoltage * 0.90f) + (rawVoltage * 0.10f);
+  return filteredVoltage;
 #else
   return 0.0f;
 #endif
 }
+
+void checkAndRecoverI2C() {
+  if (Wire.getError() != 0) {
+    Serial.println("OSTRZEŻENIE: Wykryto błąd I2C! Próba restartu magistrali...");
+    Wire.end();
+    delay(5);
+    Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
+    Wire.setTimeOut(10);
+    pca.begin();
+    pca.setPWMFreq(SERVO_FREQUENCY);
+  }
+}
+
+void configureMPU6050DLPF() {
+#if ENABLE_IMU
+  Wire.beginTransmission(0x68); // Adres I2C MPU6050
+  Wire.write(0x1A);             // Rejestr CONFIG
+  Wire.write(0x03);             // Setting 3 = DLPF ~42Hz
+  Wire.endTransmission();
+  Serial.println("MPU6050: Sprzętowy DLPF ustawiony na 42Hz.");
+#endif
+}
+
 
 uint16_t getWifiRssiForMSP() {
   if (WiFi.status() != WL_CONNECTED) return 0;
@@ -350,6 +509,10 @@ void setup() {
   Serial.begin(115200);
   Serial.println("\n\n--- RCSIM ESP32 Hub V3.3 FULL ---");
 
+  // Inicjalizacja Task Watchdog Timer (WDT)
+  esp_task_wdt_init(WDT_TIMEOUT_SEC, true);
+  esp_task_wdt_add(NULL); // Dodaj obecny wątek (Core 1 / pętla loop)
+
   // 1. Inicjalizacja Wi-Fi
   if (useStaticIP) {
     WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS);
@@ -370,6 +533,7 @@ void setup() {
 
   // 3. I2C + PCA9685
   Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
+  Wire.setTimeOut(10); // Limit oczekiwania I2C na 10 ms
   i2c_scan();
 
   pca.begin();
@@ -382,11 +546,10 @@ void setup() {
 
   // 4. IMU
   #if ENABLE_IMU
-  if (mpu.begin() == 0) {
-    Serial.println("IMU MPU6050 Gotowe.");
-    mpu.calcOffsets();
+  if (initIMU()) {
+    Serial.println("IMU Zaimplementowane i Gotowe!");
   } else {
-    Serial.println("Błąd inicjalizacji IMU!");
+    Serial.println("BŁĄD: Nie znaleziono aktywnego czujnika IMU!");
   }
   #endif
 
@@ -449,6 +612,9 @@ void setup() {
 // PETLA GLOWNA (LOOP)
 // =================================================================================
 void loop() {
+  esp_task_wdt_reset(); // Reset watchdoga
+  checkAndRecoverI2C();  // Autoodzyskiwanie szyny I2C w przypadku zawieszenia
+
   // 1. Watchdog Wi-Fi
   static unsigned long lastWifiCheck = 0;
   if (WiFi.status() != WL_CONNECTED && (millis() - lastWifiCheck > 5000)) {
@@ -505,10 +671,10 @@ void loop() {
     lastTelem = millis();
 
     #if ENABLE_IMU
-    mpu.update();
+    updateIMU();
 
     #if ENABLE_WALKSNAIL_OSD
-    sendWalksnailAttitude(mpu.getAngleX(), mpu.getAngleY(), mpu.getAngleZ());
+    sendWalksnailAttitude(imu_roll, imu_pitch, imu_yaw);
     #endif
     #endif
 
@@ -529,18 +695,18 @@ void loop() {
     if (gps.satellites.isValid()) sats = gps.satellites.value();
     #endif
 
-    char j[384];
+    char j[416];
     snprintf(j, sizeof(j),
       "{"
-        "\"imu\":{\"ax\":%.2f,\"ay\":%.2f,\"az\":%.2f,\"gx\":%.2f,\"gy\":%.2f,\"gz\":%.2f},"
+        "\"imu\":{\"ax\":%.2f,\"ay\":%.2f,\"az\":%.2f,\"gx\":%.2f,\"gy\":%.2f,\"gz\":%.2f,\"roll\":%.1f,\"pitch\":%.1f,\"yaw\":%.1f},"
         "\"gps\":{\"valid\":%s,\"lat\":%.6f,\"lng\":%.6f,\"alt\":%.1f,\"speed\":%.1f,\"sats\":%u},"
         "\"vbat\":%.2f,"
         "\"rssi\":%d"
       "}",
       #if ENABLE_IMU
-      mpu.getAccX(), mpu.getAccY(), mpu.getAccZ(), mpu.getGyroX(), mpu.getGyroY(), mpu.getGyroZ(),
+      imu_ax, imu_ay, imu_az, imu_gx, imu_gy, imu_gz, imu_roll, imu_pitch, imu_yaw,
       #else
-      0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
       #endif
       gpsValid ? "true" : "false", lat, lng, alt, speedKmph, sats,
       readBatteryVoltage(),
