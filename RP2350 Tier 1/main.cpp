@@ -220,11 +220,10 @@ void loop() {
                 failsafe_active = true;
                 Serial.println("E-STOP TRIGGERED: Signal Killed.");
             } else if (inputString.equals("ARM")) {
-                if (estop_active) {
-                    estop_active = false;
-                    Serial.println("E-STOP CLEARED: Ready to Arm.");
-                }
-            } else if (inputString.length() > 10) {
+                estop_active = false;
+                last_rx_time = millis();
+                Serial.println("ARM RECEIVED: Ready.");
+            } else if (inputString.length() >= 7) {
                 processInputString();
             }
             inputString = "";
