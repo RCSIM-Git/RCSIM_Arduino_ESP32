@@ -49,7 +49,7 @@
   // Piny I2C dla AI-Thinker
   #define I2C_SDA_PIN 21
   #define I2C_SCL_PIN 22
-  #define XCLK_FREQ 20000000
+  #define XCLK_FREQ 10000000
 #endif
 
 #ifdef BOARD_WROVER_DEV
@@ -73,7 +73,7 @@
   // Piny I2C dla Wrover-Dev (Przeniesione na 13/14, aby uniknąć konfliktu z SCCB kamery)
   #define I2C_SDA_PIN 13
   #define I2C_SCL_PIN 14
-  #define XCLK_FREQ 20000000  // Zwiększono dla lepszego FPS (standard dla ESP32-CAM)
+  #define XCLK_FREQ 10000000  // Zwiększono dla lepszego FPS (standard dla ESP32-CAM)
 #endif
 
 #ifdef  BOARD_LILYGO_TSIMCAM_S3
@@ -96,7 +96,7 @@
   #define PCLK_GPIO_NUM     13
   #define I2C_SDA_PIN 21
   #define I2C_SCL_PIN 46
-  #define XCLK_FREQ 20000000
+  #define XCLK_FREQ 10000000
 #endif
 
 // --- KONFIGURACJA SIECI WiFi ---
@@ -196,9 +196,12 @@ void videoTask(void *pvParameters) {
         if (!fb) { vTaskDelay(pdMS_TO_TICKS(10)); continue; }
         
         client.printf("--frame\r\nContent-Type: image/jpeg\r\nContent-Length: %u\r\n\r\n", fb->len);
-        client.write(fb->buf, fb->len);
-        client.print("\r\n");
+        size_t n1 = client.write(fb->buf, fb->len);
+        size_t n2 = client.print("\r\n");
         esp_camera_fb_return(fb);
+        if (n1 == 0 || n2 == 0) {
+          break; // Klient rozłączony! Wyjdź i zwolnij połączenie
+        }
         vTaskDelay(pdMS_TO_TICKS(1)); // Maksymalna płynność (odświeżanie zależne od prędkości matrycy)
       }
       client.stop();
@@ -267,11 +270,19 @@ void setup() {
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = XCLK_FREQ;
   config.pixel_format = PIXFORMAT_JPEG;
-  config.frame_size = FRAMESIZE_VGA;
-  config.jpeg_quality = 15; // Niższa wartość = lepsza jakość (skala 0-63)
-  config.fb_count = 2;
-  config.grab_mode = CAMERA_GRAB_LATEST;
-  config.fb_location = CAMERA_FB_IN_PSRAM;
+  if (psramFound()) {
+    config.frame_size = FRAMESIZE_VGA;
+    config.jpeg_quality = 12;
+    config.fb_count = 2;
+    config.grab_mode = CAMERA_GRAB_LATEST;
+    config.fb_location = CAMERA_FB_IN_PSRAM;
+  } else {
+    config.frame_size = FRAMESIZE_CIF;
+    config.jpeg_quality = 15;
+    config.fb_count = 1;
+    config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
+    config.fb_location = CAMERA_FB_IN_DRAM;
+  }
 
   delay(500); // Czas na stabilizację sensora po starcie WiFi i I2C
   esp_err_t err = esp_camera_init(&config);

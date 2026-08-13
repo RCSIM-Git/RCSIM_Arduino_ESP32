@@ -38,7 +38,7 @@
   #define PCLK_GPIO_NUM     22
   #define I2C_SDA_PIN 21
   #define I2C_SCL_PIN 22
-  #define XCLK_FREQ 20000000
+  #define XCLK_FREQ 10000000
 #endif
 
 #ifdef BOARD_WROVER_DEV
@@ -60,7 +60,7 @@
   #define PCLK_GPIO_NUM     22
   #define I2C_SDA_PIN 13
   #define I2C_SCL_PIN 14
-  #define XCLK_FREQ 20000000  
+  #define XCLK_FREQ 10000000  
 #endif
 
 #ifdef  BOARD_LILYGO_TSIMCAM_S3
@@ -82,12 +82,12 @@
   #define PCLK_GPIO_NUM      13
   #define I2C_SDA_PIN 21
   #define I2C_SCL_PIN 46
-  #define XCLK_FREQ 20000000
+  #define XCLK_FREQ 10000000
 #endif
 
 // --- KONFIGURACJA SIECI WiFi ---
-const char* ssid = "ssid";
-const char* password = "password";     
+const char* ssid = "your_ssid";
+const char* password = "your_password";     
 
 bool useStaticIP = true;
 IPAddress local_IP(192, 168, 31, 111); 
@@ -224,32 +224,41 @@ void videoTask(void *pvParameters) {
         if (!fb) { vTaskDelay(pdMS_TO_TICKS(10)); continue; }
         
         client.printf("--frame\r\nContent-Type: image/jpeg\r\nContent-Length: %u\r\n\r\n", fb->len);
-        client.write(fb->buf, fb->len);
-        client.print("\r\n");
+        size_t n1 = client.write(fb->buf, fb->len);
+        size_t n2 = client.print("\r\n");
         esp_camera_fb_return(fb);
+        if (n1 == 0 || n2 == 0) {
+          break; // Klient rozłączony! Wyjdź i zwolnij połączenie
+        }
         vTaskDelay(pdMS_TO_TICKS(1)); 
       }
       client.stop();
+    } else {
+      // Opróżnienie bufora ramki, gdy nikt nie ogląda wideo (zapobiega cam_hal: FB-OVF)
+      camera_fb_t *fb = esp_camera_fb_get();
+      if (fb) {
+        esp_camera_fb_return(fb);
+      }
     }
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(50));
   }
 }
 #endif
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("\n\n--- RCSIM ESP32 Hub V3.2 STABLE ---");
+  Serial.println("\n\n--- RCSIM ESP32 V1.2 STABLE ---");
 
   // 1. WiFi
   if (useStaticIP) {
     WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS);
   }
   WiFi.begin(ssid, password);
-  Serial.print("Łączenie z WiFi...");
+  Serial.print("Łączenie z/Connecting with WiFi...");
   int retry = 0;
   while (WiFi.status() != WL_CONNECTED && retry < 20) { delay(500); Serial.print("."); retry++; }
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\nPołączono! IP: " + WiFi.localIP().toString());
+    Serial.println("\nPołączono/Connected IP: " + WiFi.localIP().toString());
   }
 
   // 2. I2C Inicjalizacja
@@ -265,15 +274,15 @@ void setup() {
   #endif
   
   triggerFailsafe();
-  Serial.println("PCA9685 Gotowy.");
+  Serial.println("PCA9685 Gotowy/Ready.");
 
   // 4. IMU
   #if ENABLE_IMU
   if (mpu.begin() == 0) {
-    Serial.println("IMU Gotowy.");
+    Serial.println("IMU Gotowy/Ready.");
     mpu.calcOffsets();
   } else {
-    Serial.println("Błąd telemetrii IMU!");
+    Serial.println("Błąd telemetrii/ERROR IMU!");
   }
   #endif
 
@@ -300,20 +309,29 @@ void setup() {
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = XCLK_FREQ;
   config.pixel_format = PIXFORMAT_JPEG;
-  config.frame_size = FRAMESIZE_VGA;
-  config.jpeg_quality = 15;
-  config.fb_count = 2;
-  config.grab_mode = CAMERA_GRAB_LATEST;
-  config.fb_location = CAMERA_FB_IN_PSRAM;
+  
+  if (psramFound()) {
+    config.frame_size = FRAMESIZE_VGA;
+    config.jpeg_quality = 12;
+    config.fb_count = 2;
+    config.grab_mode = CAMERA_GRAB_LATEST;
+    config.fb_location = CAMERA_FB_IN_PSRAM;
+  } else {
+    config.frame_size = FRAMESIZE_QVGA;
+    config.jpeg_quality = 12;
+    config.fb_count = 1;
+    config.grab_mode = CAMERA_GRAB_LATEST;
+    config.fb_location = CAMERA_FB_IN_DRAM;
+  }
 
   delay(500);
   esp_err_t err = esp_camera_init(&config);
   if (err == ESP_OK) {
     videoServer.begin();
     xTaskCreatePinnedToCore(videoTask, "videoTask", 4096, NULL, 1, NULL, 0);
-    Serial.println("Kamera OK. Strumień: http://IP:81/stream");
+    Serial.println("Kamera/Camera OK http://IP:81/stream");
   } else {
-    Serial.printf("Błąd kamery: 0x%x\n", err);
+    Serial.printf("Błąd kamery/Camera ERROR: 0x%x\n", err);
   }
   #endif
 
