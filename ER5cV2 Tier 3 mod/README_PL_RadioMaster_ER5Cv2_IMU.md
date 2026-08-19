@@ -1,9 +1,14 @@
 # 🚀 RadioMaster ER5C V2 ExpressLRS (2.4GHz) – Mod z telemetrią IMU (MPU9250 / MPU6050 / MPU6500)
 
+*Dostępne języki: [Polski](README_PL_RadioMaster_ER5Cv2_IMU.md) | [English](README_EN_RadioMaster_ER5Cv2_IMU.md)*
+
+---
+
 Rozszerzona wersja oprogramowania **ExpressLRS v4.1.0** przeznaczona dla odbiornika **RadioMaster ER5C V2 (ESP8285)**.
 Oprogramowanie to dodaje pełną obsługę czujnika inercyjnego **IMU MPU9250 / MPU6050 / MPU6500 / MPU9255** przez magistralę I2C i przesyła dane telemetryczne **w czasie rzeczywistym (20Hz)** do aparatury (np. RadioMaster Nomad) i komputera PC (RCSIM GCS).
 
 ---
+
 
 ## 📌 Główne Funkcje Modułu IMU
 
@@ -101,4 +106,5 @@ elif frame_type == 0x86 and len(payload) >= 18:  # CRSF_FRAMETYPE_CUSTOM_IMU
 W katalogu `release/` znajdują się gotowe pliki:
 1. `ELRS_V4.1_RadioMaster_ER5Cv2_MPU9250.bin.gz` – Gotowy wsad skompresowany (dla WebUI).
 2. `ELRS_V4.1_RadioMaster_ER5Cv2_MPU9250.bin` – Surowy plik binarny (dla FTDI `esptool.py`).
-3. `README_PL_RadioMaster_ER5Cv2_IMU.md` – Niniejszy dokument instalacyjny.
+3. `README_PL_RadioMaster_ER5Cv2_IMU.md` – Niniejszy dokument instalacyjny (wersja PL).
+4. `README_EN_RadioMaster_ER5Cv2_IMU.md` – Dokumentacja w języku angielskim (wersja EN).
