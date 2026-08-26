@@ -39,3 +39,51 @@ Aby funkcja autokalibracji działała poprawnie, należy fizycznie połączyć:
 Urządzenia peryferyjne podłączone są do dedykowanych pinów I2C zależnie od profilu płytki:
 * Np. dla profilu WROVER: `SDA = 13`, `SCL = 14`.
 * Hub posiada wbudowany skaner szyny I2C (`i2c_scan()`), który na starcie systemu wypisuje w terminalu szeregowym (115200 bps) wszystkie wykryte urządzenia (szczególnie poszukując adresów `0x40` dla PCA9685 oraz `0x68` dla IMU).
+
+---
+
+## 🛠️ Instalacja i Konfiguracja Środowiska (Arduino IDE)
+
+### 1. Dodanie obsługi płytek ESP32
+1. W Arduino IDE wejdź w **Plik** -> **Preferencje** (`Ctrl + ,`).
+2. W polu **Dodatkowe adresy URL do menedżera płytek** (Additional Boards Manager URLs) wklej oficjalny adres:
+   ```text
+   https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+   ```
+3. Otwórz **Menedżer Płytek** (**Narzędzia** -> **Płytka** -> **Menedżer płytek...**).
+4. Wyszukaj frazę `esp32` (autor: *Espressif Systems*) i kliknij **Zainstaluj** (wersja 2.0.x / 3.x).
+
+---
+
+### 2. Wymagane Biblioteki (Menedżer Bibliotek)
+W **Menedżerze Bibliotek** (**Narzędzia** -> **Zarządzaj bibliotekami...** / `Ctrl + Shift + I`) zainstaluj:
+
+- **Adafruit PWM Servo Driver Library** (autor: *Adafruit*) — do sterowania PCA9685.
+- **Adafruit BusIO** (autor: *Adafruit*) — biblioteka pomocnicza dla magistrali I2C/SPI Adafruit.
+- **MPU6050_light** (autor: *rfetick*) — szybki odczyt telemetrii IMU.
+- *Uwaga:* `esp_camera`, `WiFi`, `WiFiUdp`, `Wire` są wbudowane w rdzeń ESP32 i nie wymagają instalacji.
+
+---
+
+### 3. Ustawienia Kompilatora i Wgrywania (Menu Narzędzia / Tools)
+
+| Parametr w menu Narzędzia | Wartość | Opis |
+|---|---|---|
+| **Board (Płytka)** | `"ESP32 Wrover Module"` lub `"AI Thinker ESP32-CAM"` | Zależnie od modelu płytki |
+| **Partition Scheme** | **`"Huge APP (3MB No OTA/1MB SPIFFS)"`** | **KRYTYCZNE!** Wymagane, by pomieścić stos wideo MJPEG i Wi-Fi |
+| **Flash Frequency** | `40MHz` | Stabilna częstotliwość pamięci Flash |
+| **Flash Mode** | `DIO` | Standardowy tryb dostępu do Flash |
+| **Core Debug Level** | `None` | Brak zbędnego spamu na porcie UART |
+| **Erase All Flash Before Sketch Upload** | `Disabled` | Standardowy tryb |
+| **Upload Speed** | `115200` (lub `921600`) | `115200` zapewnia stabilny transfer bez błędów transmisji |
+| **Port** | Wybierz odpowiedni port COM (np. `COM10`) | Port szeregowy programatora |
+
+---
+
+### 4. Procedura Wgrywania (ESP32-CAM)
+1. **Tryb Bootloadera:** Połącz pin **`GPIO 0` (IO0)** z pinem **`GND`**.
+2. Wciśnij przycisk **`RST`** na płytce.
+3. W Arduino IDE kliknij **Wgraj** (Upload).
+4. Po zakończeniu wgrywania: **odłącz `GPIO 0` od `GND`** i wciśnij **`RST`**, aby uruchomić program.
+5. **Zasilanie:** Płytkę należy zasilać ze stabilnego źródła 5V (np. zewnętrzny BEC 5V/2A), unikając zasilania kamery z cienkich linii 3.3V programatorów USB.
+

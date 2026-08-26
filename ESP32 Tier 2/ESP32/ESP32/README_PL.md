@@ -55,13 +55,53 @@ Pakiet przesyłany z ESP32 na adres IP komputera (port **12347**):
 
 ---
 
-## 🛠️ Wymagane Biblioteki
+## 🛠️ Instalacja i Konfiguracja Środowiska (Arduino IDE)
 
-Do poprawnej kompilacji w Arduino IDE wymagane są biblioteki:
+### 1. Dodanie obsługi płytek ESP32
+1. Otwórz Arduino IDE i wejdź w **Plik** -> **Preferencje** (`Ctrl + ,`).
+2. W polu **Dodatkowe adresy URL do menedżera płytek** (Additional Boards Manager URLs) wklej oficjalny adres:
+   ```text
+   https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+   ```
+3. Otwórz **Menedżer Płytek** (**Narzędzia** -> **Płytka** -> **Menedżer płytek...** lub ikona płytki na bocznym pasku).
+4. Wyszukaj frazę `esp32` (autor: *Espressif Systems*) i kliknij **Zainstaluj** (zalecana wersja 2.0.x / 3.x).
 
-- `Adafruit PWMServoDriver Library`
-- `MPU6050_light`
-- `esp_camera` (wbudowana w zestaw ESP32 Board Manager)
+---
+
+### 2. Wymagane Biblioteki (Menedżer Bibliotek)
+Otwórz **Menedżer Bibliotek** (**Narzędzia** -> **Zarządzaj bibliotekami...** / `Ctrl + Shift + I`) i zainstaluj:
+
+- **Adafruit PWM Servo Driver Library** (autor: *Adafruit*) — do sterowania modułem PCA9685 po I2C.
+- **Adafruit BusIO** (autor: *Adafruit*) — wymagana zależność dla bibliotek Adafruit.
+- **MPU6050_light** (autor: *rfetick*) — lekka i szybka obsługa czujnika żyroskopu/akcelerometru MPU6050.
+- *Uwaga:* Biblioteka `esp_camera` oraz `WiFi` / `WiFiUdp` / `Wire` są wbudowane bezpośrednio w pakiet płytki ESP32 (Board Support Package) i nie wymagają instalacji z zewnątrz.
+- *Opcjonalnie (dla innych wariantów / funkcji):* `AsyncTCP`, `ESPAsyncWebServer`, `PPMEncoder`.
+
+---
+
+### 3. Ustawienia Kompilatora i Wgrywania (Menu Narzędzia / Tools)
+Aby kompilacja i wgrywanie przebiegły bez błędów, ustaw parametry w menu **Narzędzia** według poniższej konfiguracji:
+
+| Parametr w menu Narzędzia | Wartość | Opis / Dlaczego tak |
+|---|---|---|
+| **Board (Płytka)** | `"ESP32 Wrover Module"` lub `"AI Thinker ESP32-CAM"` | Zależnie od posiadanej płytki (dla Freenove/WROVER wybierz Wrover Module) |
+| **Partition Scheme** | **`"Huge APP (3MB No OTA/1MB SPIFFS)"`** | **KRYTYCZNE!** Domyślna partycja nie pomieści kodu ze stosem Wi-Fi, MJPEG i kamerą |
+| **Flash Frequency** | `40MHz` | Zapewnia stabilną pracę pamięci Flash SPI |
+| **Flash Mode** | `DIO` | Standardowy, bezpieczny tryb odczytu pamięci Flash |
+| **Core Debug Level** | `None` | Wyłącza zbędny narzut diagnostyczny na porcie szeregowym |
+| **Erase All Flash Before Sketch Upload** | `Disabled` | Standardowe wgrywanie |
+| **Upload Speed** | `115200` (lub `921600`) | `115200` zapobiega błędom CRC/timeout przy tanich konwerterach UART |
+| **Port** | Wybierz właściwy port (np. `COM10`) | Port szeregowy podłączonego konwertera lub płytki ESP32 |
+
+---
+
+### 4. Procedura Wgrywania Firmware (ESP32-CAM Gotchas)
+W przypadku popularnych płytek **AI-Thinker ESP32-CAM** (bez wbudowanego portu USB-UART):
+1. **Wejście w tryb Bootloadera:** Połącz zworką pin **`GPIO 0` (IO0)** z pinem **`GND`**.
+2. Wciśnij przycisk **`RST` (Reset)** na płytce ESP32-CAM (lub odłącz i podłącz zasilanie).
+3. W Arduino IDE kliknij **Wgraj** (Upload / `Ctrl + U`).
+4. **Uruchomienie programu:** Po zakończeniu wgrywania ("Done uploading"), **odłącz pin `GPIO 0` od `GND`**, a następnie ponownie wciśnij przycisk **`RST`**, aby uruchomić wgrany firmware.
+5. **Zasilanie:** Płytki ESP32 z włączoną kamerą i Wi-Fi pobierają w impulsach do 500mA. Zapewnij stabilne zasilanie 5V (np. z zewnętrznego BEC-a 5V/2A), unikając zasilania bezpośrednio ze słabych linii 3.3V konwertera USB.
 
 ---
 

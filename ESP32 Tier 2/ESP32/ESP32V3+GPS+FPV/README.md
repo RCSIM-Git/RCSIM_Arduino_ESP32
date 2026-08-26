@@ -96,18 +96,56 @@ The ESP32 broadcasts telemetry JSON packets to the GCS PC IP on port **12347** a
 
 ---
 
-## 🛠️ Required Libraries
+## 🛠️ Environment Setup & Arduino IDE Configuration
 
-To compile in Arduino IDE or PlatformIO, ensure the following libraries are installed:
+### 1. Adding ESP32 Board Support
+1. In Arduino IDE, open **File** -> **Preferences** (`Ctrl + ,`).
+2. Add the official Espressif boards manager URL into **Additional Boards Manager URLs**:
+   ```text
+   https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+   ```
+3. Open **Boards Manager** (**Tools** -> **Board** -> **Boards Manager...**).
+4. Search for `esp32` (by *Espressif Systems*) and install the latest stable version (2.0.x / 3.x).
 
-- `Adafruit PWMServoDriver Library`
-- `TinyGPSPlus`
-- `esp_camera` (included in ESP32 Arduino Core)
-- **Depending on `ACTIVE_IMU` configuration**:
-  - For `IMU_TYPE_MPU6050`: `MPU6050_light`
-  - For `IMU_TYPE_MPU9250`: `MPU9250_WE`
-  - For `IMU_TYPE_BNO08X`: `Adafruit BNO08x`
-  - For `IMU_TYPE_BMX160`: `DFRobot_BMX160`
+---
+
+### 2. Required Libraries (Library Manager)
+In **Library Manager** (**Tools** -> **Manage Libraries...** / `Ctrl + Shift + I`), install:
+
+- **Adafruit PWM Servo Driver Library** (by *Adafruit*) — I2C PWM driver for PCA9685.
+- **Adafruit BusIO** (by *Adafruit*) — core bus dependency for Adafruit drivers.
+- **TinyGPSPlus** (by *Mikal Hart*) — parses NMEA sentences from the GPS module.
+- **Depending on active IMU (`ACTIVE_IMU`)**:
+  - For `IMU_TYPE_MPU6050` (default): **MPU6050_light** (by *rfetick*).
+  - For `IMU_TYPE_MPU9250`: **MPU9250_WE** (by *Wolfgang Ewald*).
+  - For `IMU_TYPE_BNO08X`: **Adafruit BNO08x** (by *Adafruit*).
+  - For `IMU_TYPE_BMX160`: **DFRobot_BMX160** (by *DFRobot*).
+- *Note:* `esp_camera`, `esp_task_wdt`, `WiFi`, `WiFiUdp`, and `Wire` are built into the ESP32 Arduino Core.
+- *Optional (for related Web/PPM features):* `AsyncTCP`, `ESPAsyncWebServer`, `PPMEncoder`.
+
+---
+
+### 3. Compilation & Flashing Settings (Tools Menu)
+
+| Setting in Tools Menu | Recommended Value | Notes / Rationale |
+|---|---|---|
+| **Board** | `"ESP32 Wrover Module"` or `"AI Thinker ESP32-CAM"` | Select Wrover Module for boards with PSRAM (Freenove / WROVER) |
+| **Partition Scheme** | **`"Huge APP (3MB No OTA/1MB SPIFFS)"`** | **CRITICAL!** Required to fit Wi-Fi, GPS, OSD, and MJPEG video stacks |
+| **Flash Frequency** | `40MHz` | Stable SPI Flash operating frequency |
+| **Flash Mode** | `DIO` | Standard, reliable Flash access mode |
+| **Core Debug Level** | `None` | Eliminates serial logging overhead |
+| **Erase All Flash Before Sketch Upload** | `Disabled` | Standard flashing procedure |
+| **Upload Speed** | `115200` (or `921600`) | `115200` avoids timing/CRC errors on external USB-UART adapters |
+| **Port** | Select active COM port (e.g. `COM10`) | Serial port connected to your programmer / ESP32 |
+
+---
+
+### 4. Firmware Flashing Procedure (ESP32-CAM Gotchas)
+1. **Enter Bootloader Mode:** Connect pin **`GPIO 0` (IO0)** directly to **`GND`**.
+2. Press the **`RST` (Reset)** button on the ESP32 board.
+3. In Arduino IDE, click **Upload** (`Ctrl + U`).
+4. Once completed ("Done uploading"): **disconnect `GPIO 0` from `GND`** and press **`RST`** to boot the firmware.
+5. **Power Supply:** Full setup with camera, GPS, OSD, and Wi-Fi requires stable 5V power (e.g., external 5V/2A BEC). Avoid powering through weak 3.3V lines from USB-UART converters.
 
 ---
 

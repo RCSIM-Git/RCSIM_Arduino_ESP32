@@ -96,18 +96,56 @@ ESP32 przesyła pakiety JSON na adres IP komputera stacji naziemnej na port **12
 
 ---
 
-## 🛠️ Wymagane Biblioteki
+## 🛠️ Instalacja i Konfiguracja Środowiska (Arduino IDE)
 
-Do poprawnej kompilacji w środowisku Arduino IDE / PlatformIO wymagane są następujące biblioteki:
+### 1. Dodanie obsługi płytek ESP32
+1. Otwórz Arduino IDE i wejdź w **Plik** -> **Preferencje** (`Ctrl + ,`).
+2. W polu **Dodatkowe adresy URL do menedżera płytek** (Additional Boards Manager URLs) wklej oficjalny adres:
+   ```text
+   https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+   ```
+3. Otwórz **Menedżer Płytek** (**Narzędzia** -> **Płytka** -> **Menedżer płytek...**).
+4. Wyszukaj `esp32` (autor: *Espressif Systems*) i zainstaluj najnowszą stabilną wersję (2.0.x / 3.x).
 
-- `Adafruit PWMServoDriver Library`
-- `TinyGPSPlus`
-- `esp_camera` (wbudowana w pakiet ESP32 Board Support)
-- **Zależnie od wybranego `ACTIVE_IMU`**:
-  - Dla `IMU_TYPE_MPU6050`: `MPU6050_light`
-  - Dla `IMU_TYPE_MPU9250`: `MPU9250_WE`
-  - Dla `IMU_TYPE_BNO08X`: `Adafruit BNO08x`
-  - Dla `IMU_TYPE_BMX160`: `DFRobot_BMX160`
+---
+
+### 2. Wymagane Biblioteki (Menedżer Bibliotek)
+Otwórz **Menedżer Bibliotek** (**Narzędzia** -> **Zarządzaj bibliotekami...** / `Ctrl + Shift + I`) i zainstaluj:
+
+- **Adafruit PWM Servo Driver Library** (autor: *Adafruit*) — sterownik I2C układu PCA9685.
+- **Adafruit BusIO** (autor: *Adafruit*) — wymagana zależność magistrali dla bibliotek Adafruit.
+- **TinyGPSPlus** (autor: *Mikal Hart*) — obsługa i parsowanie ramek NMEA z modułu GPS.
+- **Zależnie od wybranego czujnika IMU (`ACTIVE_IMU`)**:
+  - Dla `IMU_TYPE_MPU6050` (domyślny): **MPU6050_light** (autor: *rfetick*).
+  - Dla `IMU_TYPE_MPU9250`: **MPU9250_WE** (autor: *Wolfgang Ewald*).
+  - Dla `IMU_TYPE_BNO08X`: **Adafruit BNO08x** (autor: *Adafruit*).
+  - Dla `IMU_TYPE_BMX160`: **DFRobot_BMX160** (autor: *DFRobot*).
+- *Uwaga:* Biblioteki `esp_camera`, `esp_task_wdt`, `WiFi`, `WiFiUdp`, `Wire` są integralną częścią rdzenia ESP32.
+- *Opcjonalnie (dla innych rozszerzeń):* `AsyncTCP`, `ESPAsyncWebServer`, `PPMEncoder`.
+
+---
+
+### 3. Ustawienia Kompilatora i Wgrywania (Menu Narzędzia / Tools)
+
+| Parametr w menu Narzędzia | Wartość | Opis / Dlaczego tak |
+|---|---|---|
+| **Board (Płytka)** | `"ESP32 Wrover Module"` lub `"AI Thinker ESP32-CAM"` | Wybierz Wrover Module dla płytek z PSRAM (Freenove / WROVER) |
+| **Partition Scheme** | **`"Huge APP (3MB No OTA/1MB SPIFFS)"`** | **KRYTYCZNE!** Wymagane ze względu na rozmiar stosu Wi-Fi, GPS, OSD i kamery |
+| **Flash Frequency** | `40MHz` | Stabilna praca pamięci Flash |
+| **Flash Mode** | `DIO` | Bezpieczny tryb dostępu do Flash |
+| **Core Debug Level** | `None` | Brak zbędnego narzutu na portach UART |
+| **Erase All Flash Before Sketch Upload** | `Disabled` | Standardowe programowanie pamięci |
+| **Upload Speed** | `115200` (lub `921600`) | `115200` zapobiega błędom transmisji przy programatorach USB-UART |
+| **Port** | Wybierz właściwy port COM (np. `COM10`) | Port szeregowy podłączonej płytki / programatora |
+
+---
+
+### 4. Procedura Wgrywania Firmware (ESP32-CAM Gotchas)
+1. **Wejście w tryb Bootloadera:** Połącz pin **`GPIO 0` (IO0)** z masą **`GND`**.
+2. Wciśnij przycisk **`RST`** na płytce ESP32.
+3. W Arduino IDE kliknij **Wgraj** (Upload / `Ctrl + U`).
+4. Po zakończeniu wgrywania: **odłącz `GPIO 0` od `GND`** i wciśnij **`RST`**, aby uruchomić układ.
+5. **Zasilanie:** Cały układ z kamerą, GPS, OSD i Wi-Fi wymaga stabilnego zasilania 5V (np. zewnętrzny BEC 5V/2A). Unikaj zasilania bezpośrednio ze słabych linii 3.3V konwerterów USB-UART.
 
 ---
 
