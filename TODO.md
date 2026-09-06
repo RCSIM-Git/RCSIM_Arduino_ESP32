@@ -6,6 +6,7 @@
 - [ ] **SBUS Jitter (Tier 6)**: Zaimplementować filtrację Median Filter dla odczytów SBUS w Watchdogu, aby wyeliminować drgania serw.
 - [x] **I2C Bus Collision**: Wdrożono autoodzyskiwanie magistrali I2C (Bus Recovery) i limit czasu (Timeout) chroniące przed zawieszeniem pętli głównej.
 - [x] **ExpressLRS ER5C V2 I2C-IMU Mod & Video Guide (Tier 3)**: Zsynchronizowano dedykowany poradnik wideo (YouTube: `CIJ9e5cBtAE`), instrukcję pinoutu I2C (CH4/CH5), wgrywania OTA/FTDI, konfiguracji WebUI oraz telemetrii CRSF 0x86 na stronie internetowej i w Kompendium Wiedzy.
+- [x] **ExpressLRS ER5C V2 GPS + IMU All-In-One Mod (Tier 3)**: Opracowano customowe firmware z obsługą dowolnego modułu GPS (UART NMEA 9600-115200 bps z auto-baudrate), wzbogaconym parserem RMC (pozycja, prędkość, kurs), ochroną pinu PWM dla regulatora ESC (tryb `SERIAL_RX_ONLY`) oraz jednoczesną telemetrią IMU MPU9250 (I2C) i GPS (CRSF `0x02`, `0x03`, `0x86`). Wygenerowano wsady `.bin` i `.bin.gz` oraz kompletną dokumentację PL/EN.
 - [x] **Direct USB & Transmitter Compatibility Matrix (Tier 3)**: Opracowano i wdrożono pełną dokumentację trybu Direct USB (eliminacja adapterów, pełna moc anteny), matrycę pinoutów i ustawień dla wszystkich popularnych nadajników (Nomad, Ranger, BetaFPV, Happymodel, TBS, aparatur z wbudowanym ELRS), pułapkę Backpacka na ESP32 (3/1 vs 16/17), przełączniki DIP, procedurę revertu do radia oraz krytyczne zasady zasilania USB Fast-Charge (1W / 3A).
 
 ## 🏗️ Architektura i Rozwój

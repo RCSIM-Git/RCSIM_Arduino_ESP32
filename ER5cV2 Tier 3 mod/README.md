@@ -1,108 +1,121 @@
-# 🚀 RadioMaster ER5C V2 ExpressLRS (2.4GHz) – IMU Telemetry Mod (MPU9250 / MPU6050 / MPU6500)
+# 🛰️ RadioMaster ER5C V2 ExpressLRS (2.4GHz) – Custom Firmware & Telemetry Mods (GPS + IMU)
 
-*Languages: [Polski](README_PL_RadioMaster_ER5Cv2_IMU.md) | [English](README_EN_RadioMaster_ER5Cv2_IMU.md)*
-
----
-
-Extended firmware build of **ExpressLRS v4.1.0** tailored for the **RadioMaster ER5C V2 (ESP8285)** receiver.
-This custom firmware adds native I2C support for **MPU9250 / MPU6050 / MPU6500 / MPU9255** inertial measurement units (IMU), transmitting telemetry data **in real time (20Hz)** to the transmitter module (e.g. RadioMaster Nomad) and the host PC (RCSIM Ground Control Station).
+*Languages & Manuals:*
+- **GPS + IMU All-In-One (Recommended):** [Polski 🇵🇱](README_PL_RadioMaster_ER5Cv2_GPS.md) | [English 🇬🇧](README_EN_RadioMaster_ER5Cv2_GPS.md)
+- **IMU Dedicated (MPU9250):** [Polski 🇵🇱](README_PL_RadioMaster_ER5Cv2_IMU.md) | [English 🇬🇧](README_EN_RadioMaster_ER5Cv2_IMU.md)
+- **Source Code Developer Patch Guides:** [GPS Patch Guide](PATCH_INSTRUCTIONS_GPS.md) | [IMU Patch Guide](PATCH_INSTRUCTIONS.md)
 
 ---
 
-## 📌 Key Features
+## 📖 Overview
 
-- **Raw Inertial & Magnetic Telemetry:** Accelerometer ($\pm 2g$), Gyroscope ($\pm 250\,\text{dps}$), Magnetometer ($\mu\text{T}$).
-- **Custom CRSF Frame:** Telemetry frame `0x86` (`CRSF_FRAMETYPE_CUSTOM_IMU`), extending the standard CRSF v3 protocol.
-- **20Hz Radio Stream:** Low-latency telemetry stream transmitted directly from RX to TX and forwarded over serial/USB to the PC.
-- **Failsafe Heartbeat:** If the IMU sensor is disconnected, the receiver broadcasts a verification heartbeat frame with a default gravity vector of $1.0g$ ($9.81\,\text{m/s}^2$).
-- **Dynamic I2C Pin Assignment:** Configure arbitrary I2C pins (SDA / SCL) directly in the receiver's WebUI.
-
----
-
-## 🔌 Hardware Wiring (Pinout)
-
-The **RadioMaster ER5C V2** receiver provides 5 PWM servo output headers. We assign **Channel 4 (CH4)** and **Channel 5 (CH5)** signal pins as the I2C bus interface for the IMU sensor.
-
-### Pinout Table:
-
-| IMU Pin (MPU9250) | RadioMaster ER5C V2 Header | WebUI Pin Function | Description |
-| :--- | :--- | :--- | :--- |
-| **VCC** | **`+`** (PWM Power Rail) | Power (3.3V / 5V) | Power supply |
-| **GND** | **`-`** (PWM Ground Rail) | Ground (GND) | Ground |
-| **SDA** | **`~` (Signal Pin CH4)** | **`I2C SDA`** | I2C Data Line |
-| **SCL** | **`~` (Signal Pin CH5)** | **`I2C SCL`** | I2C Clock Line |
-
-> 💡 **Note:** Ensure the `AD0` address pin on your MPU9250 breakout board is pulled to GND (default I2C address `0x68`).
+Custom builds of **ExpressLRS v4.1.0** tailored specifically for the 5-channel PWM receiver **RadioMaster ER5C V2 (ESP8285)**.
+These builds unlock real-time vehicle telemetry for autonomous and teleoperated RC vehicles (RCSIM Tier 3 architecture):
+- **GPS Telemetry:** Position, speed, altitude, heading, satellite count, and precise UTC time directly over standard CRSF frames (`0x02` and `0x03`).
+- **Inertial Telemetry (IMU):** 9-DoF acceleration, angular velocity, and magnetic field from MPU9250 / MPU6050 sensors over custom CRSF frame `0x86`.
+- **PWM Motor & Steering Integrity:** Intelligent `SERIAL_RX_ONLY` driver mode ensures CH2 remains a fully functional PWM output for the motor ESC, while CH3 serves as the GPS UART input.
 
 ---
 
-## ⚙️ WebUI Configuration Guide
+## 🛠️ Available Firmware Releases
 
-1. Power on the ER5C V2 receiver and wait ~60 seconds without turning on the transmitter to enter Wi-Fi AP mode.
-2. Connect your PC or smartphone to the receiver's Wi-Fi hotspot:
-   - **SSID:** `ExpressLRS RX`
-   - **Password:** `expresslrs`
-3. Open a web browser and navigate to: **`http://10.0.0.1`** (or `http://elrs_rx.local`).
-4. Navigate to the **Connections / PWM Pin Functions** section:
-   - Set **Output 4** function to: **`I2C SDA`**
-   - Set **Output 5** function to: **`I2C SCL`**
-5. Click **SAVE** at the bottom of the page and reboot the receiver.
+| Firmware File | Type | Flashing Method | Features | Recommended Use |
+| :--- | :--- | :--- | :--- | :--- |
+| **`ELRS_V4.1_RadioMaster_ER5Cv2_GPS_IMU.bin.gz`** | All-In-One | **OTA Wi-Fi WebUI** | GPS + IMU + PWM | **Standard Tier 3 (Recommended)** |
+| **`ELRS_V4.1_RadioMaster_ER5Cv2_GPS_IMU.bin`** | All-In-One | **FTDI UART (`esptool.py`)** | GPS + IMU + PWM | Wired recovery / initial flash |
+| **`ELRS_V4.1_RadioMaster_ER5Cv2_MPU9250.bin.gz`** | IMU Dedicated | **OTA Wi-Fi WebUI** | IMU + PWM | Setup with IMU only |
+| **`ELRS_V4.1_RadioMaster_ER5Cv2_MPU9250.bin`** | IMU Dedicated | **FTDI UART (`esptool.py`)** | IMU + PWM | Wired recovery |
 
 ---
 
-## 📥 Firmware Flashing Guide
+## 🔌 Hardware Wiring Comparison
 
-### Method A: Over-The-Air (OTA) via WebUI (Recommended)
-1. Connect to the receiver's WebUI (`http://10.0.0.1` or `http://elrs_rx.local`).
-2. Navigate to the **Update** tab (`http://10.0.0.1/#update`).
-3. Select the file: `ELRS_V4.1_RadioMaster_ER5Cv2_MPU9250.bin.gz`.
-4. Click **Update** and wait for the flash process to finish and the device to restart.
+### 1. All-In-One Setup (GPS + IMU + Motor + Steering):
+| ER5C V2 Header | Connected Hardware | Module Pin | WebUI Configuration | Function |
+| :--- | :--- | :--- | :--- | :--- |
+| **CH1** | Steering Servo | Signal | **50Hz - 333Hz PWM** | Steering Angle Control |
+| **CH2** | Motor ESC | Signal | **50Hz - 400Hz PWM** | Throttle / Motor Control |
+| **CH3** | GPS Module (Beitian BN-220, etc.) | **TXD** of GPS | **Serial RX** | NMEA In (Auto-baud 9600-115200) |
+| **CH4** | IMU Breakout (MPU9250) | **SDA** | **I2C SDA** | I2C Data Line |
+| **CH5** | IMU Breakout (MPU9250) | **SCL** | **I2C SCL** | I2C Clock Line |
+| **`+` / `-`** | Power Rail | VCC / GND | 5V BEC from ESC | Common Power & Ground |
 
-### Method B: Wired via FTDI USB-UART Adapter
-1. Press and hold the **BOOT** pad/button on the underside of the ER5C V2 receiver while connecting the FTDI adapter to your PC.
-2. Run `esptool.py` (replace `COMX` with your serial COM port):
+### 2. IMU-Only Setup (Steering + Throttle + AUX):
+| ER5C V2 Header | Connected Hardware | Module Pin | WebUI Configuration | Function |
+| :--- | :--- | :--- | :--- | :--- |
+| **CH1** | Steering Servo | Signal | **50Hz - 333Hz PWM** | Steering Angle Control |
+| **CH2** | Motor ESC | Signal | **50Hz - 400Hz PWM** | Throttle / Motor Control |
+| **CH3** | AUX Servo / Light | Signal | **50Hz PWM** | Auxiliary channel |
+| **CH4** | IMU Breakout (MPU9250) | **SDA** | **I2C SDA** | I2C Data Line |
+| **CH5** | IMU Breakout (MPU9250) | **SCL** | **I2C SCL** | I2C Clock Line |
+
+---
+
+## ⚙️ Quick WebUI Setup
+
+1. Power on the ER5C V2 receiver and wait ~60s without transmitter connection until the LED fast-blinks (Wi-Fi AP mode).
+2. Connect to `ExpressLRS RX` Wi-Fi network (password: `expresslrs`).
+3. Open browser at `http://10.0.0.1` (or `http://elrs_rx.local`).
+4. Set pin functions in **Connections / PWM Pin Functions**:
+   - **Output 1**: `50Hz PWM`
+   - **Output 2**: `50Hz PWM`
+   - **Output 3**: `Serial RX` *(for GPS)*
+   - **Output 4**: `I2C SDA` *(for IMU)*
+   - **Output 5**: `I2C SCL` *(for IMU)*
+5. In **Serial/UART Options**, set **Serial 1 Protocol** to `GPS`.
+6. Click **SAVE** and power-cycle receiver.
+
+---
+
+## 📥 Flashing Instructions
+
+### Method A: Over-The-Air (OTA) via Wi-Fi WebUI (Recommended)
+1. Navigate to `http://10.0.0.1/#update`.
+2. Under **Firmware Update**, select `ELRS_V4.1_RadioMaster_ER5Cv2_GPS_IMU.bin.gz`.
+3. Click **Update** and wait ~20 seconds for verification and automatic reboot.
+
+### Method B: FTDI USB-UART Flasher (esptool.py)
+1. Hold down the **BOOT** pad on the underside of the receiver while plugging FTDI into USB.
+2. Run:
 ```powershell
-esptool.py --port COMX --baud 115200 --chip esp8266 write_flash -fm dout 0x00000 ELRS_V4.1_RadioMaster_ER5Cv2_MPU9250.bin
+esptool.py --port COMX --baud 115200 --chip esp8266 write_flash -fm dout 0x00000 ELRS_V4.1_RadioMaster_ER5Cv2_GPS_IMU.bin
 ```
 
 ---
 
-## 💻 Python / RCSIM Integration (CRSF 0x86 Decoder)
-
-In your ground station telemetry decoder (e.g. `crsf_transceiver.py`), handle frame type `0x86` as follows:
+## 💻 Python Telemetry Decoder Integration
 
 ```python
 import struct
 
-# Inside your CRSF telemetry packet parsing loop:
-elif frame_type == 0x86 and len(payload) >= 18:  # CRSF_FRAMETYPE_CUSTOM_IMU
-    ax, ay, az, gx, gy, gz, mx, my, mz = struct.unpack(">hhhhhhhhh", payload[0:18])
-    
-    # Convert raw LSBs to engineering units:
-    ax_g, ay_g, az_g = ax / 16384.0, ay / 16384.0, az / 16384.0  # g (+-2g range)
-    gx_d, gy_d, gz_d = gx / 131.0, gy / 131.0, gz / 131.0        # deg/s (+-250dps range)
-    mx_u, my_u, mz_u = mx * 0.15, my * 0.15, mz * 0.15           # uT
-    
-    data["imu"] = {
-        "ax": ax_g, "ay": ay_g, "az": az_g,
-        "gx": gx_d, "gy": gy_d, "gz": gz_d,
-        "mx": mx_u, "my": my_u, "mz": mz_u,
-        "accel_x": ax_g, "accel_y": ay_g, "accel_z": az_g,
-        "gyro_x": gx_d, "gyro_y": gy_d, "gyro_z": gz_d,
-        "mag_x": mx_u, "my": my_u, "mz": mz_u,
-        "raw": {
-            "ax": ax, "ay": ay, "az": az,
-            "gx": gx, "gy": gy, "gz": gz,
-            "mx": mx, "my": my, "mz": mz,
+def parse_crsf_telemetry(frame_type: int, payload: bytes, data: dict):
+    # CRSF_FRAMETYPE_GPS (0x02)
+    if frame_type == 0x02 and len(payload) >= 15:
+        lat, lon, speed, heading, alt = struct.unpack(">iiHHH", payload[0:14])
+        data["gps"] = {
+            "lat": lat / 1e7,
+            "lon": lon / 1e7,
+            "speed_kmh": speed / 10.0,
+            "heading_deg": heading / 100.0,
+            "altitude_m": alt - 1000,
+            "satellites": payload[14]
         }
-    }
+
+    # CRSF_FRAMETYPE_GPS_TIME (0x03)
+    elif frame_type == 0x03 and len(payload) >= 9:
+        year, month, day, hour, minute, second, ms = struct.unpack(">hBBBBBH", payload[0:9])
+        data["gps_time"] = {
+            "year": year, "month": month, "day": day,
+            "hour": hour, "minute": minute, "second": second,
+            "millisecond": ms
+        }
+
+    # CRSF_FRAMETYPE_CUSTOM_IMU (0x86)
+    elif frame_type == 0x86 and len(payload) >= 18:
+        ax, ay, az, gx, gy, gz, mx, my, mz = struct.unpack(">hhhhhhhhh", payload[0:18])
+        data["imu"] = {
+            "accel_g": (ax / 16384.0, ay / 16384.0, az / 16384.0),
+            "gyro_dps": (gx / 131.0, gy / 131.0, gz / 131.0),
+            "mag_ut": (mx * 0.15, my * 0.15, mz * 0.15)
+        }
 ```
-
----
-
-## 🛠️ Release Files
-
-- `ELRS_V4.1_RadioMaster_ER5Cv2_MPU9250.bin.gz` – Compressed binary ready for WebUI OTA flashing.
-- `ELRS_V4.1_RadioMaster_ER5Cv2_MPU9250.bin` – Raw binary file for FTDI UART flashing with `esptool.py`.
-- `README_PL_RadioMaster_ER5Cv2_IMU.md` – Documentation (Polish version).
-- `README_EN_RadioMaster_ER5Cv2_IMU.md` – Documentation (English version).
