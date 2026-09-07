@@ -165,21 +165,9 @@ W `processSentence()` emituj ramkę `sendTelemetryFrame()` również z RMC, jeś
     SerialMode mode = (sbusSerialOutput || sumdSerialOutput) ? SERIAL_TX_ONLY : SERIAL_FULL;
     if (config.GetSerialProtocol() == PROTOCOL_GPS)
     {
-        bool txIsPwm = false;
-        #if defined(GPIO_PIN_PWM_OUTPUTS_COUNT)
-        for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
-        {
-            if (GPIO_PIN_PWM_OUTPUTS[ch] == 1 && config.GetPwmChannel(ch)->val.mode < somSerial)
-            {
-                txIsPwm = true;
-                break;
-            }
-        }
-        #endif
-        if (txIsPwm)
-        {
-            mode = SERIAL_RX_ONLY;
-        }
+        // GPS na ESP8285 potrzebuje wyłącznie wejścia RX (GPIO3 / CH3).
+        // Trwale uwalniamy pin TX (GPIO1 / CH2) dla wyjścia PWM regulatora ESC!
+        mode = SERIAL_RX_ONLY;
     }
     Serial.begin(serialBaud, serialConfig, mode, -1, invert);
 ```
@@ -191,6 +179,56 @@ Przekazanie instancji portu `HardwareSerial` do `SerialGPS`:
     {
         serialIO = new SerialGPS(SERIAL_PROTOCOL_TX, SERIAL_PROTOCOL_RX, &SERIAL_PROTOCOL_RX);
     }
+```
+
+---
+
+### 5. Zwolnienie i generowanie PWM dla CH2 (ESC) w `devServoOutput`
+**Plik:** `src/lib/ServoOutput/devServoOutput.cpp`
+
+WebUI ExpressLRS w przeglądarce automatycznie wymusza wyświetlanie i zapis pinu TX jako `Serial TX`, gdy pin RX ustawiony jest na `Serial RX`. Aby odbiornik generował pełny sygnał PWM 50Hz dla ESC na kanale CH2 niezależnie od etykiety w WebUI:
+
+W funkcji `start()` (ok. linii 262):
+```cpp
+        auto mode = (eServoOutputMode)config.GetPwmChannel(ch)->val.mode;
+#if defined(PLATFORM_ESP8266)
+        if (config.GetSerialProtocol() == PROTOCOL_GPS && pin == 1)
+        {
+            // GPS na ESP8285 używa wyłącznie RX. Wymuszamy 50Hz PWM na CH2 dla ESC:
+            if (mode >= somSerial)
+            {
+                mode = som50Hz;
+            }
+        }
+        else
+#endif
+        if (mode >= somSerial)
+        {
+            pin = UNDEF_PIN;
+        }
+```
+
+W funkcji `event()` (ok. linii 345):
+```cpp
+        for (int ch = 0; ch < GPIO_PIN_PWM_OUTPUTS_COUNT; ++ch)
+        {
+            const rx_config_pwm_t *chConfig = config.GetPwmChannel(ch);
+            auto mode = (eServoOutputMode)chConfig->val.mode;
+#if defined(PLATFORM_ESP8266)
+            if (config.GetSerialProtocol() == PROTOCOL_GPS && GPIO_PIN_PWM_OUTPUTS[ch] == 1)
+            {
+                if (mode >= somSerial)
+                {
+                    mode = som50Hz;
+                }
+            }
+#endif
+            const auto frequency = servoOutputModeToFrequency(mode);
+            if (frequency && servoPins[ch] != UNDEF_PIN)
+            {
+                pwmChannels[ch] = PWM.allocate(servoPins[ch], frequency);
+            }
+        }
 ```
 
 ---
