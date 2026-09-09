@@ -33,7 +33,7 @@ The **RadioMaster ER5C V2** receiver provides 5 PWM servo output headers. We ass
 | **SDA** | **`~` (Signal Pin CH4)** | **`I2C SDA`** | I2C Data Line |
 | **SCL** | **`~` (Signal Pin CH5)** | **`I2C SCL`** | I2C Clock Line |
 
-> 💡 **Note:** Ensure the `AD0` address pin on your MPU9250 breakout board is pulled to GND (default I2C address `0x68`).
+> 💡 **Note:** Both I2C addresses **`0x68`** (AD0=GND) and **`0x69`** (AD0=HIGH or floating, e.g. on SEN-MPU6050) are auto-detected and supported out of the box!
 
 ---
 

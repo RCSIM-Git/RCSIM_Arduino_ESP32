@@ -33,7 +33,7 @@ Odbiornik **RadioMaster ER5C V2** posiada 5 kanałów serw PWM. Używamy **Kana�
 | **SDA** | **`~` (Sygnałowy Kanał 4 / CH4)** | **I2C SDA** |
 | **SCL** | **`~` (Sygnałowy Kanał 5 / CH5)** | **I2C SCL** |
 
-> 💡 **Uwaga:** Upewnij się, że zworka/pin `AD0` na czujniku MPU9250 jest zwarta do GND (adres domyślny `0x68`).
+> 💡 **Uwaga:** Zarówno adres **`0x68`** (AD0=GND), jak i **`0x69`** (AD0=VCC lub niepodłączony, np. na modułach SEN-MPU6050) są wykrywane i obsługiwane automatycznie w locie!
 
 ---
 
