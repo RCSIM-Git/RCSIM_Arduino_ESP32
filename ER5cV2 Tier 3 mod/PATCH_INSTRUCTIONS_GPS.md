@@ -233,11 +233,76 @@ W funkcji `event()` (ok. linii 345):
 
 ---
 
+### 6. Rozpięcie parowania TX/RX w WebUI i devWIFI
+Gdy na pinie CH3 wybierano `Serial RX`, interfejs ExpressLRS automatycznie wymuszał na CH2 tryb `Serial TX` i wyszarzał możliwość konfiguracji kanału (`Input`).
+
+**Plik 1:** `src/html/src/pages/connections-panel.js`
+W `_pinModeChange()` uniezależniono pin TX od pinu RX, gdy aktywny jest protokół GPS (`elrsState.config['serial-protocol'] === 9`), dzięki czemu CH2 pozostaje w 100% edytowalnym wyjściem serwa:
+```javascript
+        if (this.pinRxIndex !== undefined && this.pinTxIndex !== undefined) {
+            const isGps = elrsState.config['serial-protocol'] === 9
+            // Nie wymuszaj Serial TX na pinie CH2 jeśli aktywny jest GPS
+            if (index === this.pinTxIndex && pinTxModeValue === PWM_MODE_SERIAL && !isGps) {
+                pinRxMode.value = PWM_MODE_SERIAL
+                setDisabled(this.pinRxIndex, true)
+                setDisabled(this.pinTxIndex, true)
+                pinTxMode.disabled = true
+            }
+        }
+```
+
+**Plik 2:** `src/lib/WIFI/devWIFI.cpp`
+W `GetConfiguration()` wyłączono flagę `features |= 1` (SerialTX) dla pinu GPIO1 przy aktywnym protokole GPS, a w `UpdateConfiguration()` zabezpieczono zapis przed nadpisaniem go jako `somSerial`.
+
+---
+
+### 7. Telemetria Diagnostyczna I2C IMU i Naprawa Zatrzasku GPOC ESP8285
+**Pliki:** `src/src/rxtx_common.cpp`, `src/lib/IMU/devImu.cpp`, `src/lib/IMU/mpu9250.cpp`
+
+1. **Usunięcie błędu zatrzasku wyjścia (stuck HIGH latch bug):**
+   W bibliotece Wire na ESP8266/ESP8285 sterownik software I2C (`core_esp8266_si2c.cpp`) symuluje open-drain poprzez ustawianie `GPES` (załączenie drivera wyjścia do ściągania do masy GND). Wymaga to, aby zatrzask danych wyjściowych (`GPOC`) wynosił `0`. Poprzednia sekwencja recovery zostawiała `digitalWrite(HIGH)`, przez co driver zamiast ściągać do 0V, wystawiał stale 3.3V, wywołując trwały błąd NACK (kod 2) na każdym podłączonym sensorze. W `setupWire()` oraz przed detekcją wyzerowano rejestry `GPOC = (1 << sda) | (1 << scl)`.
+2. **Automatyczne wykrywanie zamiany pinów SDA $\leftrightarrow$ SCL:**
+   W `devImu.cpp`, gdy pod adresem 0x68 i 0x69 pojawia się błąd 2, odbiornik natychmiast automatycznie próbuje odwróconej pary pinów `(SCL, SDA)`. Jeśli IMU odpowie, odbiornik trwale blokuje działającą orientację przewodów bez konieczności fizycznego ich przepinania.
+3. **Kody stanu magistrali I2C w ramce 0x86 (sekcja Raw w RCSIM):**
+   - `Acceleration X` = `diag_err68` (0 = OK, **2 = NACK brak układu pod 0x68**, 255 = I2C wyłączone w WebUI)
+   - `Acceleration Y` = `diag_whoami68` (odczytany rejestr WHO_AM_I pod 0x68)
+   - `Acceleration Z` = `16384` (stała grawitacji $1.0g$ jako bezpieczny heartbeat)
+   - `Angular velocity X` = `diag_err69` (kod błędu pod adresem 0x69)
+   - `Angular velocity Y` = `diag_whoami69` (WHO_AM_I pod adresem 0x69)
+   - `Angular velocity Z` = `imu_address` (104 = 0x68, 105 = 0x69)
+
+---
+
+### 8. Telemetria Diagnostyczna GPS (Kody Błędów UART / NMEA w Ramce 0x02)
+**Plik:** `src/src/rx-serial/SerialGPS.cpp`
+
+Gdy odbiornik nie zablokował jeszcze prawidłowych pakietów NMEA (`validPacketsCount == 0`) lub nastąpiła utrata strumienia (`now - lastValidPacketMs > 3000`), funkcja `sendQueuedData()` co 1000 ms wysyła ramkę diagnostyczną `0x02` (`CRSF_FRAMETYPE_GPS`):
+- `latitude` = 0, `longitude` = 0
+- `satellites_in_use` = Kod stanu:
+  - **`0` (`NO_DATA`):** 0 bajtów na RX (CH3) – linia odłączona lub brak zasilania GPS
+  - **`1` (`SCANNING_BAUD`):** Bajty przychodzą, auto-baud skanuje prędkości
+  - **`2` (`CHECKSUM_FAIL`):** Bajty przychodzą, ale ramki nie przechodzą sumy kontrolnej
+  - **`3` (`BAUD_LOCKED`):** Prędkość UART dopasowana, oczekiwanie na pełne ramki
+  - **`4` (`LOST_TIMEOUT`):** Utrata sygnału GPS w locie/jeździe (> 3s)
+- `groundspeed` = Testowany baudrate / 100 (1152 = 115200 bps, 96 = 9600 bps, 384 = 38400 bps, 576 = 57600 bps)
+- `altitude` = Licznik odebranych surowych bajtów (`1000 + rawBytesCount % 10000`)
+- `gps_heading` = Licznik błędów sumy kontrolnej NMEA (`csumErrors % 36000`)
+
+Po odebraniu pierwszej poprawnej ramki NMEA tryb diagnostyczny automatycznie ustępuje miejsca rzeczywistej telemetrii nawigacyjnej.
+
+---
+
 ## 🔨 Budowanie i Generowanie Wsadu
 
-1. **Kompilacja bazowa:**
+1. **Przebudowa WebUI (opcjonalnie przy zmianach w HTML):**
    ```bash
-   cd ExpressLRS
+   cd ExpressLRS/src/html
+   npm run build:sx128x-rx-8285
+   ```
+
+2. **Kompilacja bazowa:**
+   ```bash
+   cd ExpressLRS/src
    pio run -e Unified_ESP8285_2400_RX_via_WIFI
    ```
 

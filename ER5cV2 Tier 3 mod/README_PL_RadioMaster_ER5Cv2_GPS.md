@@ -118,6 +118,57 @@ elif frame_type == 0x03 and len(payload) >= 9:  # CRSF_FRAMETYPE_GPS_TIME
 
 ---
 
+## 🩺 Diagnostyka Sprzętowa IMU w Czasie Rzeczywistym (Kody Błędów I2C)
+
+Gdy odbiornik nie może nawiązać fizycznej komunikacji z czujnikiem IMU (`!imu_initialized`), zamiast wysyłać zera, przesyła w surowej telemetrii ramki `0x86` (`Raw`) dokładne kody stanu magistrali I2C:
+
+| Oś w RCSIM (`Raw`) | Zmienna w firmware | Wartość | Znaczenie i Diagnoza |
+| :--- | :--- | :---: | :--- |
+| **Acceleration X** | `diag_err68` | **`0`**<br>**`2`**<br>**`3`**<br>**`4`**<br>**`99`**<br>**`255`** | **0** = Połączenie I2C OK (odebrano ACK)<br>**2** = **Brak układu pod 0x68 (NACK on address)**<br>**3** = NACK podczas transmisji danych<br>**4** = Inny błąd magistrali (np. zwarcie)<br>**99** = Stan oczekiwania (brak próby odczytu)<br>**255** = Szyna I2C wyłączona (brak trybów SDA/SCL w WebUI) |
+| **Acceleration Y** | `diag_whoami68` | **`0x71`** (113)<br>**`0x73`** (115)<br>**`0x68`** (104)<br>**`0x70`** (112)<br>**`0`** | **MPU-9250**<br>**MPU-9255**<br>**MPU-6050**<br>**MPU-6500**<br>**0 = Brak odpowiedzi rejestru WHO_AM_I** |
+| **Acceleration Z** | Domyślny wektor | **`16384`** | Stała grawitacji $1.0g$ ($9.81 m/s^2$) – bezpieczny sygnał heartbeat |
+| **Angular velocity X** | `diag_err69` | Kody jak w `diag_err68` | Sprawdzenie alternatywnego adresu I2C `0x69` (gdy AD0 = VCC) |
+| **Angular velocity Y** | `diag_whoami69` | Identyfikatory chipu | Odczytany rejestr WHO_AM_I pod adresem `0x69` |
+| **Angular velocity Z** | `imu_address` | **`104`** (`0x68`)<br>**`105`** (`0x69`) | Aktualnie sprawdzany adres I2C |
+
+### Szybka ściągawka usuwania usterek IMU:
+- **`Acceleration X = 2` oraz `Angular velocity X = 2`:** Układ nie odpowiada elektrycznie na magistrali:
+  1. Zamień miejscami przewody sygnałowe **CH4 (SDA)** i **CH5 (SCL)**.
+  2. Sprawdź zasilanie VCC oraz wspólną masę GND z pinem `-` odbiornika.
+  3. Upewnij się, że wtyczka w gnieździe serw nie jest odwrócona do góry nogami (sygnał jest na górnym pinie).
+- **`Acceleration X = 0`, ale brak danych ruchu:** Układ odpowiedział ACK pod 0x68, ale `Acceleration Y` (WHO_AM_I) nie pasuje do znanych chipów z rodziny MPU.
+- **`Acceleration X = 255`:** W WebUI odbiornika na piny CH4 i CH5 nie ustawiono opcji `I2C SDA` i `I2C SCL`.
+
+---
+
+## 🛰️ Diagnostyka Sprzętowa GPS w Czasie Rzeczywistym (Kody Stanu UART / NMEA)
+
+Gdy odbiornik nie zablokował jeszcze prawidłowych ramek NMEA z GPS (`validPacketsCount == 0`) lub nastąpiła utrata sygnału (> 3s), odbiornik ER5C V2 wysyła cyklicznie (co 1000 ms) specjalną ramkę diagnostyczną `0x02` (`CRSF_FRAMETYPE_GPS`) z `Latitude = 0` i `Longitude = 0`.
+
+Dzięki temu zarówno w **RCSIM GCS**, jak i bezpośrednio na ekranie aparatury **EdgeTX / OpenTX** (sensory `Sats`, `GSpd`, `GAlt`, `Hdg`), od razu widać fizyczny stan połączenia z modułem GPS bez konieczności podłączania debuggera:
+
+| Pole CRSF (`0x02`) | Sensor EdgeTX | Pole w RCSIM | Znaczenie i Wartość Diagnostyczna |
+| :--- | :--- | :--- | :--- |
+| **`Satellites`** | `Sats` | `gps["satellites"]`<br>`diagnostic["state_code"]` | **Kod stanu połączenia z GPS:**<br>• **`0` (`NO_DATA`):** Brak jakichkolwiek bajtów na pinie RX (CH3). Linia jest całkowicie głucha.<br>• **`1` (`SCANNING_BAUD`):** Bajty przychodzą, trwa skanowanie prędkości UART.<br>• **`2` (`CHECKSUM_FAIL`):** Bajty przychodzą, ale ramki nie przechodzą sumy kontrolnej NMEA XOR.<br>• **`3` (`BAUD_LOCKED`):** Prędkość UART dopasowana i zablokowana, oczekiwanie na pełne ramki.<br>• **`4` (`LOST_TIMEOUT`):** Utrata strumienia GPS w trakcie pracy (brak poprawnych ramek > 3s). |
+| **`Groundspeed`** | `GSpd` | `gps["speed"]`<br>`diagnostic["baud_rate"]` | **Aktualnie testowany / zablokowany Baudrate:**<br>• **`115.2 km/h`** = **115200 bps**<br>• **`9.6 km/h`** = **9600 bps**<br>• **`38.4 km/h`** = **38400 bps**<br>• **`57.6 km/h`** = **57600 bps** |
+| **`Altitude`** | `GAlt` | `gps["altitude"]`<br>`diagnostic["bytes_received"]` | **Licznik odebranych bajtów na pinie CH3** (`rawBytesCount % 10000`):<br>• **`0 m`** = Ani jeden bajt nie dotarł do odbiornika (brak sygnału).<br>• **`> 0 m`** (np. 45 m, 120 m...) = Tyle bajtów fizycznie odebrał UART. Jeśli liczba rośnie, linia fizyczna i zasilanie GPS działają! |
+| **`Heading`** | `Hdg` | `gps["heading"]`<br>`diagnostic["csum_errors"]` | **Licznik błędów sumy kontrolnej NMEA** (`csumErrors / 100.0`):<br>• Pokazuje ile ramek miało niepoprawny CRC (np. z powodu złego baudrate lub szumu). |
+
+### 🔍 Szybka ściągawka usuwania usterek GPS:
+- **`Sats = 0`, `GAlt = 0` (stan `NO_DATA`):**
+  1. Sprawdź, czy przewód **TX** modułu GPS jest wpięty do pinu sygnałowego **CH3** odbiornika.
+  2. Sprawdź, czy moduł GPS ma zasilanie 5V (VCC) i wspólną masę (GND) z odbiornikiem.
+  3. Upewnij się, że nie zamieniłeś TX z RX modułu GPS (odbiornik ER5C V2 potrzebuje sygnału **TX z GPS wpiętego do CH3**).
+- **`Sats = 1` lub `2`, `GAlt > 0` rośnie (stan `SCANNING` / `CHECKSUM_FAIL`):**
+  1. Sygnał fizyczny dociera do odbiornika, ale żaden pakiet nie tworzy poprawnej ramki NMEA.
+  2. Moduł GPS może być fabrycznie ustawiony na binarny protokół u-blox UBX bez NMEA (włącz NMEA w programie u-center).
+  3. Moduł nadaje z niestandardową prędkością (np. 4800 lub 230400 bps) poza zakresem Auto-Baud (9600-115200 bps).
+- **Gdy GPS złapie prawidłowe pakiety NMEA (`validPacketsCount > 0`):**
+  1. Tryb diagnostyczny natychmiast automatycznie ustępuje miejsca prawdziwej telemetrii nawigacyjnej.
+  2. Odbiornik zaczyna transmitować rzeczywiste współrzędne geograficzne (`Latitude`, `Longitude`), realną wysokość n.p.m., prędkość, kurs i liczbę śledzonych satelitów (0..32+).
+
+---
+
 ## 🛠️ Zbiór Plików Wydania (Release)
 
 Pliki binarne znajdują się w niniejszym katalogu:

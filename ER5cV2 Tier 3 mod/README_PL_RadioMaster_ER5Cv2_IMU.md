@@ -101,6 +101,29 @@ elif frame_type == 0x86 and len(payload) >= 18:  # CRSF_FRAMETYPE_CUSTOM_IMU
 
 ---
 
+## 🩺 Diagnostyka Sprzętowa IMU w Czasie Rzeczywistym (Kody Błędów I2C)
+
+Gdy odbiornik nie może nawiązać fizycznej komunikacji z czujnikiem IMU (`!imu_initialized`), zamiast wysyłać zera, przesyła w surowej telemetrii ramki `0x86` (`Raw`) dokładne kody stanu magistrali I2C:
+
+| Oś w RCSIM (`Raw`) | Zmienna w firmware | Wartość | Znaczenie i Diagnoza |
+| :--- | :--- | :---: | :--- |
+| **Acceleration X** | `diag_err68` | **`0`**<br>**`2`**<br>**`3`**<br>**`4`**<br>**`99`**<br>**`255`** | **0** = Połączenie I2C OK (odebrano ACK)<br>**2** = **Brak układu pod 0x68 (NACK on address)**<br>**3** = NACK podczas transmisji danych<br>**4** = Inny błąd magistrali (np. zwarcie)<br>**99** = Stan oczekiwania (brak próby odczytu)<br>**255** = Szyna I2C wyłączona (brak trybów SDA/SCL w WebUI) |
+| **Acceleration Y** | `diag_whoami68` | **`0x71`** (113)<br>**`0x73`** (115)<br>**`0x68`** (104)<br>**`0x70`** (112)<br>**`0`** | **MPU-9250**<br>**MPU-9255**<br>**MPU-6050**<br>**MPU-6500**<br>**0 = Brak odpowiedzi rejestru WHO_AM_I** |
+| **Acceleration Z** | Domyślny wektor | **`16384`** | Stała grawitacji $1.0g$ ($9.81 m/s^2$) – bezpieczny sygnał heartbeat |
+| **Angular velocity X** | `diag_err69` | Kody jak w `diag_err68` | Sprawdzenie alternatywnego adresu I2C `0x69` (gdy AD0 = VCC) |
+| **Angular velocity Y** | `diag_whoami69` | Identyfikatory chipu | Odczytany rejestr WHO_AM_I pod adresem `0x69` |
+| **Angular velocity Z** | `imu_address` | **`104`** (`0x68`)<br>**`105`** (`0x69`) | Aktualnie sprawdzany adres I2C |
+
+### Szybka ściągawka usuwania usterek IMU:
+- **`Acceleration X = 2` oraz `Angular velocity X = 2`:** Układ nie odpowiada elektrycznie na magistrali:
+  1. Zamień miejscami przewody sygnałowe **CH4 (SDA)** i **CH5 (SCL)**.
+  2. Sprawdź zasilanie VCC oraz wspólną masę GND z pinem `-` odbiornika.
+  3. Upewnij się, że wtyczka w gnieździe serw nie jest odwrócona do góry nogami (sygnał jest na górnym pinie).
+- **`Acceleration X = 0`, ale brak danych ruchu:** Układ odpowiedział ACK pod 0x68, ale `Acceleration Y` (WHO_AM_I) nie pasuje do znanych chipów z rodziny MPU.
+- **`Acceleration X = 255`:** W WebUI odbiornika na piny CH4 i CH5 nie ustawiono opcji `I2C SDA` i `I2C SCL`.
+
+---
+
 ## 🛠️ Zbiór Plików Wydania (Release)
 
 W katalogu `release/` znajdują się gotowe pliki:
