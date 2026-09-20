@@ -10,7 +10,7 @@
 This custom EdgeTX firmware turns your RadioMaster transmitter into a **bidirectional, zero-latency CRSF transceiver** over a single standard USB-C cable:
 
 1. **Direct PC Control (100–250 Hz RX):**
-   Your PC (running **RCSIM-GCS**, sim-racing steering wheel, pedals, and handbrake) transmits standard CRSF frames (Channels 1–16) directly over the USB-C Virtual COM Port (VCP) into the radio's mixer and internal ExpressLRS (ELRS) / 4-in-1 RF module.
+   Your PC (running **RCSIM-GCS**) transmits standard CRSF frames (Channels 1–16) directly over the USB-C Virtual COM Port (VCP) into the radio's mixer and RF module.
 2. **Full-Duplex Telemetry Mirroring (TX back to PC):**
    Live telemetry packets transmitted from your RC vehicle (battery voltage/current/capacity, link statistics/RSSI/LQ/SNR, GPS position/speed/heading, and onboard IMU/attitude) are mirrored in real time and sent back through the USB-C cable directly to the PC.
 3. **Zero Extra Hardware on your Desk (Zero Dongles):**

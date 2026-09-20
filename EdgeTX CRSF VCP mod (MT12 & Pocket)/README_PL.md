@@ -10,7 +10,7 @@
 Oprogramowanie zamienia aparaturę RadioMaster w **dwukierunkowy transceiver CRSF o zerowej latencji**, wykorzystujący pojedynczy fabryczny kabel USB-C:
 
 1. **Bezpośrednie sterowanie z PC (RX 100–250 Hz):**
-   Komputer (aplikacja **RCSIM-GCS**) przesyła standardowe ramki CRSF (kanały 1–16) bezpośrednio po wirtualnym porcie szeregowym USB-C (VCP) do miksera EdgeTX i wewnętrznego modułu nadawczego ExpressLRS (ELRS) / 4-in-1.
+   Komputer (aplikacja **RCSIM-GCS**) przesyła standardowe ramki CRSF (kanały 1–16) bezpośrednio po wirtualnym porcie szeregowym USB-C (VCP) do miksera EdgeTX i modułu nadawczego.
 2. **Pełny dupleks telemetrii (TX powrotny do PC):**
    Pakiety telemetrii wysyłane z pojazdu RC (napięcie baterii, prąd, zużycie mAh, Link Statistics, RSSI, jakość łącza LQ, współrzędne GPS, prędkość oraz przeciążenia z IMU) są natychmiast lustrzanie przesyłane kablem USB-C z powrotem do komputera!
 3. **Zero dodatkowego sprzętu na biurku (Zero Dongles):**
