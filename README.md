@@ -14,81 +14,62 @@ The diagram below illustrates the signal and control flow depending on the activ
                   |          (PC App)         |
                   +-------------+-------------+
                                 |
-         +----------------------+----------------------+
-         | (USB Serial)                                | (WiFi UDP / Video Stream)
-         v                                             v
-+--------+------------------+                 +--------+------------------+
-|      [Tier 1 Bridge]      |                 |    [Tier 2 Wireless Hub] |
-|   Arduino Serial-to-PPM  |                 |      ESP32 Controller      |
-+--------+------------------+                 +--------+------------------+
-         |                                             |
-         | (PPM Signal)                                | (I2C Bus)
-         v                                             v
-+--------+------------------+                 +--------+------------------+
-|       RC Transmitter      |                 |    PCA9685 PWM Driver     |
-|   (e.g., RadioMaster MT12)|                 |   (Servos, ESC, Lights)   |
-+--------+------------------+                 +--------+---------+--------+
-         |                                                       
-         | (PPM / RC Signal)                                    
-         |                                                       
-
-
-
-
-+--------+-------------------------------------------------------+--------+
-|                      [Tier 6 Watchdog & MUX]                            |
-|             ESP32 Safety Supervisor (RCSIM HAT)                         |
-+------------------------------------+------------------------------------+
-                                     |
-                           (Heartbeat) | (Override Status)
-                                     v
-                  +------------------+------------------------+
-                  |             Raspberry Pi 5                |
-                  |        (Autonomous / SLAM Unit)           |
-                  +-------------------------------------------+
+         +----------------------+----------------------+----------------------+
+         | (USB Serial / VCP)   | (Direct USB-C CRSF)  | (WiFi UDP / Stream)  |
+         v                      v                      v                      v
++--------+----------+  +--------+-----------+ +--------+----------+  +--------+----------+
+|  [Tier 1 Bridge]  |  | [EdgeTX USB-VCP]   | | [Tier 2 Hub]     |  | [Tier 3 Direct]   |
+| Arduino / RP2350  |  | RadioMaster MT12   | | ESP32 Controller |  | RadioMaster Nomad |
++--------+----------+  | & Pocket Radio     | +--------+----------+  +--------+----------+
+         | (PPM)       +--------+-----------+          | (I2C)                | (CRSF RF)
+         v                      |                      v                      v
++--------+----------+           | (ELRS RF +           +------------------+   |
+| Standard RC Radio |           | Telemetry Mirror)    | PCA9685 Driver   |   |
++--------+----------+           |                      | (Servos, Motors) |   |
+         | (RC Signal)          v                      +------------------+   |
+         +-------------> [RC Model / Vehicle] <-------------------------------+
+                                |
+                                +-- [ER5C V2 Mod: IMU + GPS Telemetry]
+                                +-- [Tier 6 Watchdog & MUX + RPi 5 SLAM]
 ```
 
 ---
 
-## 🗂️ Module Descriptions (Tiers)
+## 🗂️ Module Descriptions (Tiers & Mods)
 
-### 📟 Tier 1: Serial to PPM Converter (Arduino)
-*Location:* `[Arduino Tier 1]
+### 🎮 EdgeTX Mod: CRSF Trainer over USB-VCP (RadioMaster MT12 & Pocket)
+*Location:* [`[EdgeTX CRSF VCP mod (MT12 & Pocket)]`](./EdgeTX%20CRSF%20VCP%20mod%20%28MT12%20%26%20Pocket%29/)
+
+A custom EdgeTX firmware modification enabling **full-duplex CRSF over a single USB-C cable**:
+*   **Channels 1–16 (100–250 Hz RX):** Control frames from PC (wheel, pedals, GCS) stream straight into the radio mixer.
+*   **Full-Duplex Telemetry (TX to PC):** Live model telemetry (Battery, RSSI/LQ, GPS, and IMU) is mirrored via USB to the PC, powering FFB and dashboard instruments.
+*   **Zero Dongles:** Direct USB-C connection without any external adapters, Arduino boards, or trainer cables.
+
+---
+
+### 📟 Tier 1: Serial to PPM Converter (Arduino & RP2350)
+*Location:* [`[Arduino Tier 1]`](./Arduino%20Tier%201/) & [`[RP2350 Tier 1]`](./RP2350%20Tier%201/)
 
 A communication bridge converting serial text commands from the GCS into a standard PPM (Pulse Position Modulation) signal.
 *   **Communication:** USB Serial (`115200 bps`), data format: `ch1,ch2,...,ch8\n`.
-*   **Physical Failsafe (Signal Kill):** If no valid control frames arrive for over `500 ms`, the system disables Timer1 interrupts and switches the PPM pin (`D10`) to high-impedance mode (`INPUT`). The RC radio immediately detects this loss of signal (Trainer Lost) and triggers its own failsafe procedure.
-*   **Hardware E-STOP:** Supports instant command overrides: `ESTOP` cuts off the PPM output signal and locks control, while `ARM` restores functionality.
-*   **Status Signalling:** The built-in LED flashes at ~5 Hz during normal operation. In Failsafe or E-STOP state, the LED turns off.
+*   **Physical Failsafe (Signal Kill):** If no valid control frames arrive for over `500 ms`, Timer interrupts are disabled and the PPM pin switches to high impedance (`INPUT`).
+*   **Hardware E-STOP:** Instant `ESTOP` command overrides and kills PPM output on emergency stop (SPACEBAR).
+*   **RP2350 Tier 1:** Dual-core ARM Cortex-M33 high-speed USB CDC bridge with zero-latency hardware PWM generation.
 
 ---
 
-### 🌐 Tier 2: Wireless Control Hub (ESP32)
-*Location:* `[ESP32 Tier 2]`
+### 📡 Tier 3 Mod: ExpressLRS ER5C V2 (GPS + IMU All-in-One)
+*Location:* [`[ER5cV2 Tier 3 mod]`](./ER5cV2%20Tier%203%20mod/)
 
-A feature-rich wireless hub for video streaming, telemetry, and RC servo control over a network.
-*   **PCA9685 Hardware Autocalibration (`calibratePCA9685`):** Utilizes a feedback loop to correct the internal oscillator frequency of the PCA9685. A test 1500 us pulse from PCA9685 channel 15 is routed directly to ESP32 GPIO 12. The ESP32 measures the pulse width using `pulseIn()` and adjusts the PCA9685 oscillator frequency until the error drops below 3 us.
-*   **Video Streaming:** MJPEG video stream served over HTTP on port `81`. It runs asynchronously on FreeRTOS Core 0.
-*   **UDP Control:** Receives text-based PWM commands on port `12345`.
-*   **IMU Telemetry:** Reads data from an MPU6050 (gyroscope + accelerometer) and sends it as JSON over UDP to port `12347`.
-*   **Failsafe Protections:** Network watchdog (automatic reconnection to AP on WiFi drop) and Control watchdog (forces all 16 channels to neutral 1500 us if UDP control data stops for >500 ms).
-
----
-
-### 💡 Arduino Lights: Intelligent RC Light Controller
-*Location:* `[Arduino Lights]
-
-A smart lighting controller decoding receiver PWM signals to control vehicle LEDs (headlights, brakes, reverse, turn signals).
-*   **Full Mode:** Reacts dynamically to steering (CH1 - turn signals with a 300 ms hysteresis delay), throttle (CH2 - brake lights when stopping/slowing down, automatic reverse lights), and auxiliary switch (CH3 - toggles headlights and roof lights).
-*   **Single-Channel Mode (Muxed Fallback):** Automatic fallback when only CH3 is connected. Allows toggling basic light modes using a single RC channel.
-*   **PCINT (Pin Change Interrupts):** Non-blocking measurement of PWM inputs on pins D8, D9, and D10. Eliminates slow, blocking `pulseIn()` calls.
-*   **Active-Low Protection:** LEDs are switched off by transitioning the Arduino pins to `INPUT` (high impedance) instead of setting them `HIGH`. This prevents reverse current flows from damaging the ESC or receiver.
-*   **Failsafe:** Loss of signal for >500 ms automatically activates hazard lights (dual turn signals flashing).
+Custom ExpressLRS receiver firmware tailored for RC car dynamics and telemetry:
+*   **I2C MPU6050/MPU9250 IMU:** High-speed accelerometer and gyroscope streaming (CRSF frame `0x86`).
+*   **UART GPS Integration:** NMEA GPS parsing (speed, heading, latitude/longitude) with dynamic auto-baudrate.
+*   **ESC Pin Protection:** Native `SERIAL_RX_ONLY` mode freeing up GPIO1 (CH2) as a standard PWM output for ESC throttles.
 
 ---
 
 ### 🛡️ Tier 6: Hardware Watchdog & SBUS Muxer (ESP32)
-*Location:* `[ESP32 Tier 6 Watchdog for RPi]
+*Location:* `[ESP32 Tier 6 Watchdog for RPi]`
 
 A safety coprocessor (supervisor) supervising the main single-board computer (Raspberry Pi 5).
 *   **Heartbeat Monitor:** Watches for a heartbeat signal from the RPi 5 on pin `PIN_HEARTBEAT` (GPIO 4). A loss of heartbeat for >1000 ms indicates a system crash and triggers the failsafe state.

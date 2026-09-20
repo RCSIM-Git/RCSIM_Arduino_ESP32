@@ -9,57 +9,61 @@ Projekt ten stanowi podsystem oprogramowania układowego (Firmware) dla platform
 Poniższy schemat przedstawia strukturę przepływu sygnałów i kontroli w zależności od wybranego trybu pracy podsystemu firmware:
 
 ```
-                  +---------------------------+
                   |    Stacja Naziemna GCS    |
                   |     (Aplikacja PC)        |
                   +-------------+-------------+
                                 |
-         +----------------------+----------------------+
-         | (Serial USB)                                | (WiFi UDP / Video Stream)
-         v                                             v
-+--------+------------------+                 +--------+------------------+
-|      [Tier 1 Bridge]      |                 |    [Tier 2 Wireless Hub] |
-|   Arduino Serial-to-PPM  |                 |      ESP32 Controller      |
-+--------+------------------+                 +--------+------------------+
-         |                                             |
-         | (Sygnał PPM)                                | (Magistrala I2C)
-         v                                             v
-+--------+------------------+                 +--------+------------------+
-|      Aparatura RC         |                 |    Sterownik PCA9685     |
-|   (np. RadioMaster MT12)  |                 |    (Serwa, Napęd, Lux)   |
-+--------+------------------+                 +--------+---------+--------+
-         |                                                       
-         | (Sygnał PPM)                                          
-         |                                                       
-
-
-
-
-+--------+-------------------------------------------------------+--------+
-|                      [Tier 6 Watchdog & MUX]                            |
-|             Koprocesor Bezpieczeństwa ESP32 (RCSIM HAT)                 |
-+------------------------------------+------------------------------------+
-                                     |
-                         (Heartbeat) | (Status Override)
-                                     v
-                  +------------------+------------------------+
-                  |             Raspberry Pi 5                |
-                  |      (Jednostka Autonomiczna / SLAM)      |
-                  +-------------------------------------------+
+         +----------------------+----------------------+----------------------+
+         | (Serial USB / VCP)   | (Bezpośredni USB-C)  | (WiFi UDP / Stream)  |
+         v                      v                      v                      v
++--------+----------+  +--------+-----------+ +--------+----------+  +--------+----------+
+|  [Tier 1 Bridge]  |  | [EdgeTX USB-VCP]   | | [Tier 2 Hub]     |  | [Tier 3 Direct]   |
+| Arduino / RP2350  |  | RadioMaster MT12   | | ESP32 Controller |  | RadioMaster Nomad |
++--------+----------+  | & Pocket Radio     | +--------+----------+  +--------+----------+
+         | (PPM)       +--------+-----------+          | (I2C)                | (CRSF RF)
+         v                      |                      v                      v
++--------+----------+           | (ELRS RF +           +------------------+   |
+| Standardowe Radio |           | Lustro Telemetrii)   | Sterownik PCA9685|   |
++--------+----------+           |                      | (Serwa, Napęd)   |   |
+         | (Sygnał RC)          v                      +------------------+   |
+         +-------------> [Pojazd / Model RC] <--------------------------------+
+                                |
+                                +-- [Mod ER5C V2: Telemetria IMU + GPS]
+                                +-- [Tier 6 Watchdog & MUX + RPi 5 SLAM]
 ```
 
 ---
 
-## 🗂️ Opis Modułów (Tiers)
+## 🗂️ Opis Modułów (Tiers i Modyfikacje)
 
-### 📟 Tier 1: Konwerter Serial na PPM (Arduino)
-*Lokalizacja:* `[Arduino Tier 1](file:///c:/Users/Mateusz/Desktop/RCSIM27.04monacoSLAM/RCSIM_PC/pc_app/ESP32Arduino/RCSIM_Arduino_ESP32/Arduino%20Tier%201)`
+### 🎮 EdgeTX Mod: CRSF Trainer przez USB-VCP (RadioMaster MT12 & Pocket)
+*Lokalizacja:* [`[EdgeTX CRSF VCP mod (MT12 & Pocket)]`](./EdgeTX%20CRSF%20VCP%20mod%20%28MT12%20%26%20Pocket%29/)
+
+Autorska modyfikacja firmware EdgeTX wprowadzająca **pełny dupleks CRSF po pojedynczym kablu USB-C**:
+*   **Kanały 1–16 (100–250 Hz RX):** Ramki sterujące z PC (kierownica sim-racing, pedały, GCS) trafiają bezpośrednio do miksera aparatury.
+*   **Pełny Dupleks Telemetrii (TX do PC):** Pakiety zwrotne z pojazdu (Bateria, Link Stats/RSSI/LQ, GPS, przeciążenia IMU) są przesyłane kablem USB do PC, zasilając wskaźniki kokpitu oraz sprzętowy Force Feedback (FFB).
+*   **Zero Dongli:** Bezpośrednie połączenie USB-C bez zewnętrznych modułów, płytek pośrednich ani adapterów audio.
+
+---
+
+### 📟 Tier 1: Konwerter Serial na PPM (Arduino & RP2350)
+*Lokalizacja:* [`[Arduino Tier 1]`](./Arduino%20Tier%201/) oraz [`[RP2350 Tier 1]`](./RP2350%20Tier%201/)
 
 Mostek komunikacyjny realizujący konwersję komend szeregowych z komputera GCS na standardowy sygnał PPM (Pulse Position Modulation).
 *   **Komunikacja:** Port szeregowy USB (`115200 bps`), format danych: `ch1,ch2,...,ch8\n`.
-*   **Fizyczny Failsafe (Signal Kill):** Brak poprawnych ramek przez ponad `500 ms` wyłącza przerwania Timera1 i przełącza pin PPM (`D10`) w stan wysokiej impedancji (`INPUT`). Aparatura RC natychmiast wykrywa utratę sygnału (Trainer Lost) i aktywuje własne procedury bezpieczeństwa.
+*   **Fizyczny Failsafe (Signal Kill):** Brak poprawnych ramek przez ponad `500 ms` wyłącza przerwania Timera i przełącza pin PPM w stan wysokiej impedancji (`INPUT`).
 *   **Sprzętowy E-STOP:** Obsługa natychmiastowych komend tekstowych `ESTOP` (odcięcie sygnału PPM i blokada sterowania) oraz `ARM` (odblokowanie).
-*   **Sygnalizacja:** Dioda LED miga z częstotliwością ok. 5 Hz podczas poprawnej pracy. W stanie Failsafe/E-STOP dioda gaśnie.
+*   **RP2350 Tier 1:** Dwurdzeniowy mikrokontroler ARM Cortex-M33 ze sprzętową generacją PWM bez opóźnień i szybkim portem USB CDC.
+
+---
+
+### 📡 Tier 3 Mod: ExpressLRS ER5C V2 (GPS + IMU All-in-One)
+*Lokalizacja:* [`[ER5cV2 Tier 3 mod]`](./ER5cV2%20Tier%203%20mod/)
+
+Dedykowany firmware dla odbiorników ExpressLRS wzbogacający modele kołowe o zaawansowaną telemetrię:
+*   **IMU MPU6050/MPU9250 (I2C):** Przesyłanie danych z żyroskopu i akcelerometru z częstotliwością do 100 Hz (ramka CRSF `0x86`).
+*   **Odbiornik GPS po UART:** Automatyczny wybór prędkości transmisji (auto-baudrate) i dekodowanie pozycji, prędkości oraz kursu.
+*   **Ochrona Pinu ESC:** Tryb `SERIAL_RX_ONLY` uwalniający pin GPIO1 (CH2) jako bezpieczne, stabilne wyjście PWM dla regulatora obrotów silnika.
 
 ---
 

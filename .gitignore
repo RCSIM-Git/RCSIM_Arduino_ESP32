@@ -16,6 +16,11 @@ sketch/
 *.o
 *.d
 
+# Allow release binaries in official mod directories
+!/EdgeTX CRSF VCP mod (MT12 & Pocket)/*.bin
+!/EdgeTX CRSF VCP mod (MT12 & Pocket)/**/*.bin
+!/ER5cV2 Tier 3 mod/*.bin
+
 # 2. PlatformIO (Pio) temporary and build directories
 .pio/
 .pioenvs/
