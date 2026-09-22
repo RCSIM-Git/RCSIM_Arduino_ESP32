@@ -1,0 +1,203 @@
+diff --git a/radio/src/CMakeLists.txt b/radio/src/CMakeLists.txt
+index 3607d13..ba0e9e0 100644
+--- a/radio/src/CMakeLists.txt
++++ b/radio/src/CMakeLists.txt
+@@ -649,9 +649,9 @@ find_program(BASH bash
+ set(OPT "s" CACHE STRING "Optimization mode (0/1/2/s)")
+ 
+ set(COMMON_FLAGS "-mcpu=${MCU} -mthumb -fomit-frame-pointer -fverbose-asm -Wa,-ahlms=firmware.lst")
+-set(COMMON_FLAGS "${COMMON_FLAGS} -gdwarf-2 -fno-exceptions -fdata-sections -ffunction-sections")
++set(COMMON_FLAGS "${COMMON_FLAGS} -gdwarf-2 -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables -fdata-sections -ffunction-sections")
+ set(COMMON_FLAGS "${COMMON_FLAGS} -DHSE_VALUE=${HSE_VALUE}")
+-set(COMMON_FLAGS "${COMMON_FLAGS} -O${OPT} ${FPU_FLAGS}")
++set(COMMON_FLAGS "${COMMON_FLAGS} -O${OPT} ${FPU_FLAGS} -fno-align-functions -fno-align-jumps -fno-align-loops -fno-align-labels")
+ set(COMMON_FLAGS "${COMMON_FLAGS} ${WARNING_FLAGS}")
+ 
+ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS} -Wimplicit")
+diff --git a/radio/src/bootloader/CMakeLists.txt b/radio/src/bootloader/CMakeLists.txt
+index 25d5aa3..7ca7286 100644
+--- a/radio/src/bootloader/CMakeLists.txt
++++ b/radio/src/bootloader/CMakeLists.txt
+@@ -1,5 +1,7 @@
+ 
+ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
++add_compile_options(-Os -fno-inline-small-functions -fno-align-functions -fno-align-jumps -fno-align-loops -fno-align-labels)
++
+ 
+ set(BOOTLOADER_SRC ${BOOTLOADER_SRC}
+   ${RADIO_SRC_DIR}/os/time_nortos.cpp
+@@ -53,6 +55,8 @@ endif()
+ 
+ add_executable(bootloader EXCLUDE_FROM_ALL ${BOOTLOADER_SRC})
+ add_dependencies(bootloader ${BITMAPS_TARGET})
++target_compile_options(bootloader PRIVATE -flto)
++target_link_options(bootloader PRIVATE -flto)
+ 
+ target_compile_definitions(stm32_drivers_w_dbg_bl PUBLIC BOOT)
+ target_compile_definitions(bootloader PUBLIC BOOT)
+diff --git a/radio/src/serial.cpp b/radio/src/serial.cpp
+index 2aa2c01..f093634 100644
+--- a/radio/src/serial.cpp
++++ b/radio/src/serial.cpp
+@@ -236,8 +236,10 @@ static void serialSetCallBacks(int mode, void* ctx, const etx_serial_port_t* por
+     // stream.
+     if (drv && drv->setReceiveCb) {
+       crsfTrainerStart(ctx, drv);
++      telemetrySetMirrorCb(ctx, sendByte);
+     } else {
+       crsfTrainerStop();
++      telemetrySetMirrorCb(nullptr, nullptr);
+     }
+     break;
+ #endif
+@@ -341,7 +343,7 @@ static void serialSetupPort(int mode, etx_serial_init& params)
+     // usbSerialInit() ignores these params. It still has to be non-zero:
+     // serialInit() treats a zero baudrate as "nothing to set up".
+     params.baudrate = CROSSFIRE_BAUDRATES[1];
+-    params.direction = ETX_Dir_RX;
++    params.direction = ETX_Dir_TX_RX;
+     break;
+ #endif
+ 
+diff --git a/radio/src/targets/common/arm/stm32/f4/system_clock.c b/radio/src/targets/common/arm/stm32/f4/system_clock.c
+index 60f89b4..7dd809c 100644
+--- a/radio/src/targets/common/arm/stm32/f4/system_clock.c
++++ b/radio/src/targets/common/arm/stm32/f4/system_clock.c
+@@ -48,7 +48,7 @@
+   * @param  None
+   * @retval None
+   */
+-void SystemClock_Config(void)
++__attribute__((used)) void SystemClock_Config(void)
+ {
+   /* Enable HSE oscillator */
+   LL_RCC_HSE_Enable();
+diff --git a/radio/src/targets/common/arm/stm32/f4/system_stm32f4xx.c b/radio/src/targets/common/arm/stm32/f4/system_stm32f4xx.c
+index b4a269b..fdbb367 100644
+--- a/radio/src/targets/common/arm/stm32/f4/system_stm32f4xx.c
++++ b/radio/src/targets/common/arm/stm32/f4/system_stm32f4xx.c
+@@ -164,7 +164,7 @@ const uint8_t APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};
+   * @param  None
+   * @retval None
+   */
+-void SystemInit(void)
++__attribute__((used)) void SystemInit(void)
+ {
+   /* FPU settings ------------------------------------------------------------*/
+   #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
+@@ -217,7 +217,7 @@ void SystemInit(void)
+   * @param  None
+   * @retval None
+   */
+-void SystemCoreClockUpdate(void)
++__attribute__((used)) void SystemCoreClockUpdate(void)
+ {
+   uint32_t tmp = 0, pllvco = 0, pllp = 2, pllsource = 0, pllm = 2;
+   
+diff --git a/radio/src/targets/taranis/CMakeLists.txt b/radio/src/targets/taranis/CMakeLists.txt
+index 7cfd625..be588a2 100644
+--- a/radio/src/targets/taranis/CMakeLists.txt
++++ b/radio/src/targets/taranis/CMakeLists.txt
+@@ -225,6 +225,10 @@ elseif(PCB STREQUAL X7)
+     set(BLUETOOTH NO)
+     set(USB_CHARGER YES)
+     add_definitions(-DMANUFACTURER_RADIOMASTER)
++    set(PXX2 OFF)
++    set(PXX1 OFF)
++    set(HELI NO)
++    set(GHOST NO)
+   elseif(PCBREV STREQUAL TX12MK2)
+     set(DEFAULT_INTERNAL_MODULE CROSSFIRE CACHE STRING "Default internal module")
+     set(INTERNAL_MODULE_SERIAL YES)
+@@ -237,7 +241,10 @@ elseif(PCB STREQUAL X7)
+       set(AUX_SERIAL ON)
+     endif()
+     add_definitions(-DMANUFACTURER_RADIOMASTER)
+-    set(PXX2 ON)
++    set(PXX2 OFF)
++    set(PXX1 OFF)
++    set(HELI NO)
++    set(GHOST NO)
+     set(ENABLE_SERIAL_PASSTHROUGH ON CACHE BOOL "Enable serial passthrough")
+   elseif(PCBREV STREQUAL MT12)
+     set(DEFAULT_INTERNAL_MODULE CROSSFIRE CACHE STRING "Default internal module")
+@@ -302,7 +309,10 @@ elseif(PCB STREQUAL X7)
+     set(ROTARY_ENCODER YES)
+     set(USB_CHARGER YES)
+     add_definitions(-DMANUFACTURER_RADIOMASTER)
+-    set(PXX2 ON)
++    set(PXX2 OFF)
++    set(PXX1 OFF)
++    set(HELI NO)
++    set(GHOST NO)
+     set(ENABLE_SERIAL_PASSTHROUGH ON CACHE BOOL "Enable serial passthrough")
+     if (NOT BLUETOOTH)
+       set(AUX_SERIAL ON)
+@@ -317,7 +327,10 @@ elseif(PCB STREQUAL X7)
+     set(ROTARY_ENCODER YES)
+     set(USB_CHARGER YES)
+     add_definitions(-DMANUFACTURER_RADIOMASTER)
+-    set(PXX2 ON)
++    set(PXX2 OFF)
++    set(PXX1 OFF)
++    set(HELI NO)
++    set(GHOST NO)
+     set(ENABLE_SERIAL_PASSTHROUGH ON CACHE BOOL "Enable serial passthrough")
+     if (NOT BLUETOOTH)
+       set(AUX_SERIAL ON)
+diff --git a/radio/src/thirdparty/FatFs/ffconf.h b/radio/src/thirdparty/FatFs/ffconf.h
+index 014fce5..83c0d6b 100644
+--- a/radio/src/thirdparty/FatFs/ffconf.h
++++ b/radio/src/thirdparty/FatFs/ffconf.h
+@@ -37,7 +37,11 @@
+ /  f_findnext(). (0:Disable, 1:Enable 2:Enable with matching altname[] too) */
+ 
+ 
+-#define FF_USE_MKFS		1
++#if defined(BOOT)
++  #define FF_USE_MKFS		0
++#else
++  #define FF_USE_MKFS		1
++#endif
+ /* This option switches f_mkfs() function. (0:Disable or 1:Enable) */
+ 
+ 
+@@ -49,7 +53,11 @@
+ /* This option switches f_expand function. (0:Disable or 1:Enable) */
+ 
+ 
+-#define FF_USE_CHMOD	1
++#if defined(BOOT)
++  #define FF_USE_CHMOD	0
++#else
++  #define FF_USE_CHMOD	1
++#endif
+ /* This option switches attribute manipulation functions, f_chmod() and f_utime().
+ /  (0:Disable or 1:Enable) Also FF_FS_READONLY needs to be 0 to enable this option. */
+ 
+@@ -160,7 +168,11 @@
+ /  on character encoding. When LFN is not enabled, these options have no effect. */
+ 
+ 
+-#define FF_FS_RPATH		2
++#if defined(BOOT)
++  #define FF_FS_RPATH		1
++#else
++  #define FF_FS_RPATH		2
++#endif
+ /* This option configures support for relative path.
+ /
+ /   0: Disable relative path and remove related functions.
+diff --git a/tools/build-common.sh b/tools/build-common.sh
+index 99276b9..44d5d05 100644
+--- a/tools/build-common.sh
++++ b/tools/build-common.sh
+@@ -36,7 +36,7 @@ get_target_build_options() {
+             BUILD_OPTIONS+="-DPCB=X7 -DPCBREV=ZORRO"
+             ;;
+         pocket)
+-            BUILD_OPTIONS+="-DPCB=X7 -DPCBREV=POCKET"
++            BUILD_OPTIONS+="-DPCB=X7 -DPCBREV=POCKET -DHELI=NO -DGHOST=NO -DPXX1=OFF -DPXX2=OFF"
+             ;;
+         mt12)
+             BUILD_OPTIONS+="-DPCB=X7 -DPCBREV=MT12"

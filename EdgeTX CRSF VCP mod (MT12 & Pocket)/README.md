@@ -128,9 +128,10 @@ To verify both control input and return telemetry before launching RCSIM-GCS:
 
 ---
 
-## 📜 Technical Details & Licensing
+## 📜 Technical Details, Source Code & GPLv3 Licensing
 
 - **EdgeTX Version:** Based on EdgeTX 2.10 development tree, PR **#7630** (`feat/crsf-trainer-over-usb-vcp`, commit `e5784ee5`).
 - **Telemetry Patch:** Integrates `telemetrySetMirrorCb` hook routing incoming CRSF telemetry directly to the USB-VCP TX endpoint buffer.
-- **License:** GNU General Public License v3.0 (GPLv3).
-- **Source Code Reference:** Upstream repository at [EdgeTX/edgetx](https://github.com/EdgeTX/edgetx).
+- **Source Code (GPLv3 Compliance):** In strict accordance with the GNU General Public License v3, the complete source code modifications applied to the upstream EdgeTX codebase are provided in this repository as a standard patch file: [`edgetx_crsf_vcp_full_duplex.patch`](./edgetx_crsf_vcp_full_duplex.patch).
+- **Upstream Source Code Reference:** EdgeTX upstream repository is hosted at [EdgeTX/edgetx](https://github.com/EdgeTX/edgetx).
+- **License:** GNU General Public License v3.0 (GPLv3). Distributed without warranty of any kind.

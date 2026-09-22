@@ -128,8 +128,10 @@ Przed uruchomieniem RCSIM-GCS możesz sprawdzić dwukierunkową komunikację:
 
 ---
 
-## 📜 Informacje Techniczne i Licencja
+## 📜 Informacje Techniczne, Kod Źródłowy i Licencja GPLv3
 
-- **Baza EdgeTX:** Gałąź EdgeTX 2.10, PR **#7630** (`feat/crsf-trainer-over-usb-vcp`).
+- **Baza EdgeTX:** Gałąź EdgeTX 2.10 development, PR **#7630** (`feat/crsf-trainer-over-usb-vcp`, commit `e5784ee5`).
 - **Modyfikacja Telemetrii:** Integracja `telemetrySetMirrorCb` przekierowująca strumień telemetrii do bufora VCP TX.
-- **Licencja:** GNU General Public License v3.0 (GPLv3).
+- **Kod Źródłowy (Zgodność z GPLv3):** Zgodnie z wymogami licencji GNU GPLv3, pełny zestaw modyfikacji w kodzie C++ wprowadzonych względem EdgeTX został udostępniony w niniejszym repozytorium w postaci pliku patch: [`edgetx_crsf_vcp_full_duplex.patch`](./edgetx_crsf_vcp_full_duplex.patch).
+- **Oficjalne Repozytorium EdgeTX:** Kod źródłowy projektu macierzystego znajduje się na [EdgeTX/edgetx](https://github.com/EdgeTX/edgetx).
+- **Licencja:** GNU General Public License v3.0 (GPLv3). Oprogramowanie dystrybuowane bez jakiejkolwiek gwarancji.
