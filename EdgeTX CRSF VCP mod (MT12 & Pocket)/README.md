@@ -1,7 +1,11 @@
 # 🎮 EdgeTX — CRSF Trainer over USB-VCP + Full-Duplex Telemetry Mirror
 
-### Custom EdgeTX Firmware for **RadioMaster MT12** & **RadioMaster Pocket**
-*Based on EdgeTX Pull Request **#7630** (`feat/crsf-trainer-over-usb-vcp`, commit `e5784ee5`) enhanced with the `telemetrySetMirrorCb` full-duplex telemetry patch.*
+> [!CAUTION]
+> ### ⚠️ EXPERIMENTAL & COMMUNITY BUILDS — USE AT YOUR OWN RISK
+> **Oprogramowanie eksperymentalne / Experimental software.**
+> - Niniejsze kompilacje firmware powstały na bazie developerskiego brancha EdgeTX PR **#7630** (`feat/crsf-trainer-over-usb-vcp`, commit `e5784ee5`) z dodaną autorską modyfikacją pełnego dupleksu telemetrii (`telemetrySetMirrorCb`).
+> - **Oprogramowanie nie było w pełni przetestowane na wszystkich modelach sprzętowych w locie/jeździe.** Wersje dla niektórych radii (Boxer, TX16S, TX12, TX12 MKII, Zorro) zostały skompilowane zoptymalizowanymi profilami, ale **wymagają weryfikacji na biurku (bench test) przed jakimkolwiek użyciem w modelu!**
+> - Zawsze wykonaj pełną kopię zapasową karty SD oraz obecnego firmware przed przystąpieniem do flashowania. Zdejmij śmigła / zabezpiecz koła pojazdu przed pierwszym testem!
 
 ---
 
@@ -10,7 +14,7 @@
 This custom EdgeTX firmware turns your RadioMaster transmitter into a **bidirectional, zero-latency CRSF transceiver** over a single standard USB-C cable:
 
 1. **Direct PC Control (100–250 Hz RX):**
-   Your PC (running **RCSIM-GCS**) transmits standard CRSF frames (Channels 1–16) directly over the USB-C Virtual COM Port (VCP) into the radio's mixer and RF module.
+   Your PC (running **RCSIM-GCS** or custom control software) transmits standard CRSF frames (Channels 1–16) directly over the USB-C Virtual COM Port (VCP) into the radio's mixer and RF module.
 2. **Full-Duplex Telemetry Mirroring (TX back to PC):**
    Live telemetry packets transmitted from your RC vehicle (battery voltage/current/capacity, link statistics/RSSI/LQ/SNR, GPS position/speed/heading, and onboard IMU/attitude) are mirrored in real time and sent back through the USB-C cable directly to the PC.
 3. **Zero Extra Hardware on your Desk (Zero Dongles):**
@@ -20,16 +24,23 @@ This custom EdgeTX firmware turns your RadioMaster transmitter into a **bidirect
 
 ---
 
-## 📦 Directory Structure & Files
+## 📦 Supported Radios & Binaries
 
-| File | Description | Size |
-|---|---|---|
-| [`EdgeTX_v2.10_MT12_CRSF_VCP_FullDuplex.bin`](./EdgeTX_v2.10_MT12_CRSF_VCP_FullDuplex.bin) | Full-Duplex CRSF VCP Firmware for **RadioMaster MT12** (Surface Radio) | ~528 KB |
-| [`EdgeTX_v2.10_Pocket_CRSF_VCP_FullDuplex.bin`](./EdgeTX_v2.10_Pocket_CRSF_VCP_FullDuplex.bin) | Full-Duplex CRSF VCP Firmware for **RadioMaster Pocket** (Stick Radio) | ~499 KB |
-| [`crsf_vcp_duplex_test.py`](./crsf_vcp_duplex_test.py) | Standalone Python verification script for bidirectional control (100 Hz) + live telemetry decoding | 7.4 KB |
-| [`crsf_vcp_test.py`](./crsf_vcp_test.py) | Standalone simplex control test script (channels only) | 6.8 KB |
-| [`legacy_v1_simplex/`](./legacy_v1_simplex/) | Baseline PR #7630 builds (control only, no telemetry mirror) | — |
-| [`README_PL.md`](./README_PL.md) | Polish documentation (Instrukcja w języku polskim) | — |
+| File | Supported Radio | Status | Notes |
+|---|---|---|---|
+| [`EdgeTX_v2.10_MT12_CRSF_VCP_FullDuplex.bin`](./EdgeTX_v2.10_MT12_CRSF_VCP_FullDuplex.bin) | **RadioMaster MT12** | Bench Tested (OK) | Surface radio (cars/boats) |
+| [`EdgeTX_v2.10_Pocket_CRSF_VCP_FullDuplex.bin`](./EdgeTX_v2.10_Pocket_CRSF_VCP_FullDuplex.bin) | **RadioMaster Pocket** | Bench Tested (OK) | 512KB Flash optimized |
+| [`EdgeTX_v2.10_Boxer_CRSF_VCP_FullDuplex.bin`](./EdgeTX_v2.10_Boxer_CRSF_VCP_FullDuplex.bin) | **RadioMaster Boxer** | ⚠️ Experimental (Untested) | Full Flash build |
+| [`EdgeTX_v2.10_TX16S_CRSF_VCP_FullDuplex.bin`](./EdgeTX_v2.10_TX16S_CRSF_VCP_FullDuplex.bin) | **RadioMaster TX16S / TX16S MKII** | ⚠️ Experimental (Untested) | Color LCD target |
+| [`EdgeTX_v2.10_TX12MK2_CRSF_VCP_FullDuplex.bin`](./EdgeTX_v2.10_TX12MK2_CRSF_VCP_FullDuplex.bin) | **RadioMaster TX12 MKII** | ⚠️ Experimental (Untested) | 512KB Flash optimized |
+| [`EdgeTX_v2.10_TX12_CRSF_VCP_FullDuplex.bin`](./EdgeTX_v2.10_TX12_CRSF_VCP_FullDuplex.bin) | **RadioMaster TX12 (V1)** | ⚠️ Experimental (Untested) | 512KB Flash optimized |
+| [`EdgeTX_v2.10_Zorro_CRSF_VCP_FullDuplex.bin`](./EdgeTX_v2.10_Zorro_CRSF_VCP_FullDuplex.bin) | **RadioMaster Zorro** | ⚠️ Experimental (Untested) | 512KB Flash optimized |
+
+### Additional Tools
+- [`crsf_vcp_duplex_test.py`](./crsf_vcp_duplex_test.py) — Standalone Python verification script for bidirectional control (100 Hz) + live telemetry decoding.
+- [`crsf_vcp_test.py`](./crsf_vcp_test.py) — Standalone simplex control test script (channels only).
+- [`legacy_v1_simplex/`](./legacy_v1_simplex/) — Baseline PR #7630 builds (control only, no telemetry mirror).
+- [`README_PL.md`](./README_PL.md) — Polska wersja dokumentacji.
 
 ---
 
@@ -42,9 +53,7 @@ The safest and most reliable flashing method is using the built-in EdgeTX Bootlo
    - Alternatively, remove the MicroSD card from the radio and insert it into a PC card reader.
 2. **Copy the Firmware:**
    - Navigate to the `FIRMWARE/` folder on the MicroSD card root.
-   - Copy the appropriate `.bin` file:
-     - For **MT12**: copy `EdgeTX_v2.10_MT12_CRSF_VCP_FullDuplex.bin`
-     - For **Pocket**: copy `EdgeTX_v2.10_Pocket_CRSF_VCP_FullDuplex.bin`
+   - Copy the appropriate `.bin` file matching your radio model into the `FIRMWARE/` folder.
 3. **Eject & Enter Bootloader:**
    - Safely eject the SD card / disconnect the USB cable.
    - Power off the radio.
@@ -121,7 +130,7 @@ To verify both control input and return telemetry before launching RCSIM-GCS:
 
 ## 📜 Technical Details & Licensing
 
-- **EdgeTX Version:** Based on EdgeTX 2.10 development tree, PR **#7630** (`feat/crsf-trainer-over-usb-vcp`).
+- **EdgeTX Version:** Based on EdgeTX 2.10 development tree, PR **#7630** (`feat/crsf-trainer-over-usb-vcp`, commit `e5784ee5`).
 - **Telemetry Patch:** Integrates `telemetrySetMirrorCb` hook routing incoming CRSF telemetry directly to the USB-VCP TX endpoint buffer.
 - **License:** GNU General Public License v3.0 (GPLv3).
 - **Source Code Reference:** Upstream repository at [EdgeTX/edgetx](https://github.com/EdgeTX/edgetx).
