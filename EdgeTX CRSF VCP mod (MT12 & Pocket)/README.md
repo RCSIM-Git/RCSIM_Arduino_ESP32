@@ -2,10 +2,10 @@
 
 > [!CAUTION]
 > ### ⚠️ EXPERIMENTAL & COMMUNITY BUILDS — USE AT YOUR OWN RISK
-> **Oprogramowanie eksperymentalne / Experimental software.**
-> - Niniejsze kompilacje firmware powstały na bazie developerskiego brancha EdgeTX PR **#7630** (`feat/crsf-trainer-over-usb-vcp`, commit `e5784ee5`) z dodaną autorską modyfikacją pełnego dupleksu telemetrii (`telemetrySetMirrorCb`).
-> - **Oprogramowanie nie było w pełni przetestowane na wszystkich modelach sprzętowych w locie/jeździe.** Wersje dla niektórych radii (Boxer, TX16S, TX12, TX12 MKII, Zorro) zostały skompilowane zoptymalizowanymi profilami, ale **wymagają weryfikacji na biurku (bench test) przed jakimkolwiek użyciem w modelu!**
-> - Zawsze wykonaj pełną kopię zapasową karty SD oraz obecnego firmware przed przystąpieniem do flashowania. Zdejmij śmigła / zabezpiecz koła pojazdu przed pierwszym testem!
+> **Important Disclaimer:**
+> - These custom firmware builds are based on the development branch of EdgeTX PR **#7630** (`feat/crsf-trainer-over-usb-vcp`, commit `e5784ee5`) enhanced with a custom full-duplex telemetry mirror patch (`telemetrySetMirrorCb`).
+> - **The newly added builds (Boxer, TX16S, TX12, TX12 MKII, Zorro) HAVE NOT been flight/field tested.** They compile cleanly with size-optimized profiles, but **require careful bench testing before any actual vehicle operation!**
+> - Always perform a complete backup of your SD card and existing radio firmware prior to flashing. Remove propellers or disconnect motor power on RC cars during initial testing!
 
 ---
 
