@@ -19,7 +19,10 @@ sketch/
 # Allow release binaries in official mod directories
 !/EdgeTX CRSF VCP mod (MT12 & Pocket)/*.bin
 !/EdgeTX CRSF VCP mod (MT12 & Pocket)/**/*.bin
-!/ER5cV2 Tier 3 mod/*.bin
+!/ExpressLRS ER Series Tier 3 mod/*.bin
+!/ExpressLRS ER Series Tier 3 mod/**/*.bin
+!/ExpressLRS ER Series Tier 3 mod/*.bin.gz
+!/ExpressLRS ER Series Tier 3 mod/**/*.bin.gz
 
 # 2. PlatformIO (Pio) temporary and build directories
 .pio/
@@ -43,3 +46,6 @@ Desktop.ini
 *.bak
 *.tmp
 *.swp
+__pycache__/
+*.pyc
+

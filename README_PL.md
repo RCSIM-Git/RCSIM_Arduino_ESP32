@@ -57,8 +57,8 @@ Mostek komunikacyjny realizujący konwersję komend szeregowych z komputera GCS 
 
 ---
 
-### 📡 Tier 3 Mod: ExpressLRS ER5C V2 (GPS + IMU All-in-One)
-*Lokalizacja:* [`[ER5cV2 Tier 3 mod]`](./ER5cV2%20Tier%203%20mod/)
+### 📡 Tier 3 Mod: ExpressLRS RadioMaster ER Series (ER4 / ER5 / ER6 / ER8 – GPS + IMU All-in-One)
+*Lokalizacja:* [`[ExpressLRS ER Series Tier 3 mod]`](./ExpressLRS%20ER%20Series%20Tier%203%20mod/)
 
 Dedykowany firmware dla odbiorników ExpressLRS wzbogacający modele kołowe o zaawansowaną telemetrię:
 *   **IMU MPU6050/MPU9250 (I2C):** Przesyłanie danych z żyroskopu i akcelerometru z częstotliwością do 100 Hz (ramka CRSF `0x86`).

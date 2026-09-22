@@ -4,6 +4,7 @@
 - **GPS + IMU All-In-One (Recommended):** [Polski 🇵🇱](README_PL_RadioMaster_ER5Cv2_GPS.md) | [English 🇬🇧](README_EN_RadioMaster_ER5Cv2_GPS.md)
 - **IMU Dedicated (MPU9250):** [Polski 🇵🇱](README_PL_RadioMaster_ER5Cv2_IMU.md) | [English 🇬🇧](README_EN_RadioMaster_ER5Cv2_IMU.md)
 - **Source Code Developer Patch Guides:** [GPS Patch Guide](PATCH_INSTRUCTIONS_GPS.md) | [IMU Patch Guide](PATCH_INSTRUCTIONS.md)
+- **Unified Git Patch (GPLv3 Source):** [`elrs_v4.1_er5cv2_gps_imu.patch`](./elrs_v4.1_er5cv2_gps_imu.patch)
 
 ---
 
@@ -147,4 +148,21 @@ When the receiver has not yet locked valid NMEA sentences (`validPacketsCount ==
 | **`Groundspeed`** | `GSpd` | `gps["speed"]`<br>`diagnostic["baud_rate"]` | **Currently Probed / Locked Baudrate:**<br>• **`115.2 km/h`** = **115200 bps**<br>• **`9.6 km/h`** = **9600 bps**<br>• **`38.4 km/h`** = **38400 bps**<br>• **`57.6 km/h`** = **57600 bps** |
 | **`Altitude`** | `GAlt` | `gps["altitude"]`<br>`diagnostic["bytes_received"]` | **Raw Byte Counter on CH3** (`rawBytesCount % 10000`):<br>• **`0 m`** = Zero bytes received (hardware disconnect / dead module).<br>• **`> 0 m`** (e.g. 45 m, 120 m...) = Number of bytes physically received. If incrementing, wiring and GPS power are healthy! |
 | **`Heading`** | `Hdg` | `gps["heading"]`<br>`diagnostic["csum_errors"]` | **NMEA Checksum Error Counter** (`csumErrors / 100.0`):<br>• Shows count of malformed / corrupt lines received. |
+
+---
+
+## 📜 Source Code, Git Patch & GNU GPLv3 License
+
+- **Base Project:** [ExpressLRS/ExpressLRS](https://github.com/ExpressLRS/ExpressLRS) (branch `master`, base commit `5909f77`).
+- **GPLv3 Compliance (Corresponding Source):** In full compliance with Section 6 of the GNU General Public License v3.0, the complete set of C++ and WebUI modifications (`src/lib/IMU/`, `SerialGPS` auto-baudrate, ESC PWM safety on CH2/GPIO1, and WebUI uncoupling) is distributed as a unified git patch:
+  [`elrs_v4.1_er5cv2_gps_imu.patch`](./elrs_v4.1_er5cv2_gps_imu.patch)
+- **Applying Patch to Clean ExpressLRS Source:**
+  ```bash
+  git clone https://github.com/ExpressLRS/ExpressLRS.git
+  cd ExpressLRS
+  git checkout 5909f77
+  git apply elrs_v4.1_er5cv2_gps_imu.patch
+  ```
+- **License:** GNU General Public License v3.0 (GPLv3).
+- **Disclaimer:** This software is an independent community modification developed for the RCSIM project and is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. ExpressLRS and RadioMaster are registered or unregistered trademarks of their respective owners.
 

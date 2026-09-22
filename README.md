@@ -73,8 +73,8 @@ Advanced wireless control, vision, and telemetry hub based on ESP32 microcontrol
 
 ---
 
-### 📡 Tier 3 Mod: ExpressLRS ER5C V2 (GPS + IMU All-in-One)
-*Location:* [`[ER5cV2 Tier 3 mod]`](./ER5cV2%20Tier%203%20mod/)
+### 📡 Tier 3 Mod: ExpressLRS RadioMaster ER Series (ER4 / ER5 / ER6 / ER8 – GPS + IMU All-in-One)
+*Location:* [`[ExpressLRS ER Series Tier 3 mod]`](./ExpressLRS%20ER%20Series%20Tier%203%20mod/)
 
 Custom ExpressLRS receiver firmware tailored for RC car dynamics and telemetry:
 *   **I2C MPU6050/MPU9250 IMU:** High-speed accelerometer and gyroscope streaming (CRSF frame `0x86`).
