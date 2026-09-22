@@ -37,8 +37,8 @@ The diagram below illustrates the signal and control flow depending on the activ
 
 ## 🗂️ Module Descriptions (Tiers & Mods)
 
-### 🎮 EdgeTX Mod: CRSF Trainer over USB-VCP (RadioMaster MT12 & Pocket)
-*Location:* [`[EdgeTX CRSF VCP mod (MT12 & Pocket)]`](./EdgeTX%20CRSF%20VCP%20mod%20%28MT12%20%26%20Pocket%29/)
+### 🎮 EdgeTX Mod: CRSF Trainer over USB-VCP (Boxer, MT12, Pocket, TX12, TX16S, Zorro)
+*Location:* [`[EdgeTX CRSF VCP mod]`](./EdgeTX%20CRSF%20VCP%20mod/)
 
 A custom EdgeTX firmware modification enabling **full-duplex CRSF over a single USB-C cable**:
 *   **Channels 1–16 (100–250 Hz RX):** Control frames from PC (wheel, pedals, GCS) stream straight into the radio mixer.

@@ -17,8 +17,8 @@ sketch/
 *.d
 
 # Allow release binaries in official mod directories
-!/EdgeTX CRSF VCP mod (MT12 & Pocket)/*.bin
-!/EdgeTX CRSF VCP mod (MT12 & Pocket)/**/*.bin
+!/EdgeTX CRSF VCP mod/*.bin
+!/EdgeTX CRSF VCP mod/**/*.bin
 !/ExpressLRS ER Series Tier 3 mod/*.bin
 !/ExpressLRS ER Series Tier 3 mod/**/*.bin
 !/ExpressLRS ER Series Tier 3 mod/*.bin.gz

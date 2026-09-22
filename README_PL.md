@@ -36,8 +36,8 @@ Poniższy schemat przedstawia strukturę przepływu sygnałów i kontroli w zale
 
 ## 🗂️ Opis Modułów (Tiers i Modyfikacje)
 
-### 🎮 EdgeTX Mod: CRSF Trainer przez USB-VCP (RadioMaster MT12 & Pocket)
-*Lokalizacja:* [`[EdgeTX CRSF VCP mod (MT12 & Pocket)]`](./EdgeTX%20CRSF%20VCP%20mod%20%28MT12%20%26%20Pocket%29/)
+### 🎮 EdgeTX Mod: CRSF Trainer przez USB-VCP (Boxer, MT12, Pocket, TX12, TX16S, Zorro)
+*Lokalizacja:* [`[EdgeTX CRSF VCP mod]`](./EdgeTX%20CRSF%20VCP%20mod/)
 
 Autorska modyfikacja firmware EdgeTX wprowadzająca **pełny dupleks CRSF po pojedynczym kablu USB-C**:
 *   **Kanały 1–16 (100–250 Hz RX):** Ramki sterujące z PC (kierownica sim-racing, pedały, GCS) trafiają bezpośrednio do miksera aparatury.
