@@ -56,6 +56,21 @@ A communication bridge converting serial text commands from the GCS into a stand
 *   **Hardware E-STOP:** Instant `ESTOP` command overrides and kills PPM output on emergency stop (SPACEBAR).
 *   **RP2350 Tier 1:** Dual-core ARM Cortex-M33 high-speed USB CDC bridge with zero-latency hardware PWM generation.
 
+### 🌐 Tier 2: Wireless Control Hub (ESP32)
+*Location:* [`[ESP32 Tier 2]`](./ESP32%20Tier%202/)
+
+Advanced wireless control, vision, and telemetry hub based on ESP32 microcontrollers:
+*   **Tier 2 Pro (V4 CRSF Multi-Link Hub):**
+    - **Native CRSF Protocol:** Full support for `0x16 RC_CHANNELS_PACKED` (16 channels 11-bit) and telemetry uplink (`0x1E Attitude IMU`, `0x02 GPS`, `0x08 Battery`, `0x14 Link Stats`) with hardware-verified **CRC8 DVB-S2**.
+    - **ESP-NOW Radio Link (1–2 ms Latency):** Direct connection-less MAC layer transmission with the PC USB Dongle – no Wi-Fi router needed, immune to home network congestions.
+    - **FreeRTOS Dual-Core Architecture:** Full separation of radio communication & telemetry (Core 0) from the real-time PWM servo loop (Core 1, 200 Hz).
+    - **Hardware Fail-Safe:** Hard neutral override (`1500 µs`) within 150 ms upon packet loss or DISARM switch (Channel 5 / AUX1).
+    - **PC USB Dongle Transmitter:** Dedicated firmware turning a secondary ESP32 into a plug-and-play USB bridge for RCSIM GCS.
+*   **Tier 2 Standard (V3 Full OSD & GPS / V2 / V1):**
+    - **PCA9685 Hardware Autocalibration:** Dynamic closed-loop tuning of oscillator frequency with tolerance <3 µs.
+    - **MJPEG FPV Streaming:** HTTP streaming on port 81 decoupled on Core 0.
+    - **UDP Control & JSON Telemetry:** UDP ports 12345 (commands) and 12347 (telemetry).
+
 ---
 
 ### 📡 Tier 3 Mod: ExpressLRS ER5C V2 (GPS + IMU All-in-One)

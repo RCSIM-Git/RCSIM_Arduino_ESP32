@@ -68,14 +68,20 @@ Dedykowany firmware dla odbiorników ExpressLRS wzbogacający modele kołowe o z
 ---
 
 ### 🌐 Tier 2: Bezprzewodowy Hub Sterowania (ESP32)
-*Lokalizacja:* `[ESP32 Tier 2](file:///c:/Users/Mateusz/Desktop/RCSIM27.04monacoSLAM/RCSIM_PC/pc_app/ESP32Arduino/RCSIM_Arduino_ESP32/ESP32%20Tier%202)`
+*Lokalizacja:* [`[ESP32 Tier 2]`](./ESP32%20Tier%202/)
 
-Zaawansowany bezprzewodowy koncentrator sterowania, wizji i telemetrii oparty na mikrokontrolerach ESP32 (ESP32-CAM, ESP32-Wrover).
-*   **Autokalibracja PCA9685 (`calibratePCA9685`):** Sprzężenie zwrotne korygujące częstotliwość wewnętrznego oscylatora PCA9685. Testowy sygnał 1500 us z kanału 15 PCA9685 jest wpinany do GPIO 12 na ESP32. Mikrokontroler mierzy impuls i dostosowuje oscylator do momentu, aż błąd spadnie poniżej 3 us.
-*   **Strumieniowanie Wizji:** Klatki MJPEG przesyłane przez HTTP na porcie `81`. Wideo obsługiwane asynchronicznie w osobnym wątku FreeRTOS przypisanym do rdzenia 0.
-*   **Sterowanie UDP:** Odbiór komend sterujących na porcie `12345`.
-*   **Telemetria IMU:** Odczyt danych z sensora MPU6050 i wysyłka w postaci JSON przez UDP na port `12347`.
-*   **Zabezpieczenia:** Watchdog sieciowy (ponowne łączenie po utracie WiFi) oraz Watchdog sterowania (failsafe na 1500 us po 500 ms braku danych UDP).
+Zaawansowany bezprzewodowy koncentrator sterowania, wizji i telemetrii oparty na mikrokontrolerach ESP32 (ESP32-CAM, ESP32-Wrover, NodeMCU, ESP32-S3):
+*   **Tier 2 Pro (V4 CRSF Multi-Link Hub):**
+    - **Natywny protokół CRSF:** Pełna obsługa ramek sterowania `0x16 RC_CHANNELS_PACKED` (16 kanałów 11-bit) oraz telemetrii zwrotnej (`0x1E Attitude IMU`, `0x02 GPS`, `0x08 Battery`, `0x14 Link Stats`) z sumą **CRC8 DVB-S2**.
+    - **ESP-NOW Link (1–2 ms):** Bezpośrednia transmisja radiowa w warstwie MAC z nadajnikiem USB Dongle wpiętym do komputera PC – brak potrzeby routera Wi-Fi, brak lagów i zakłóceń domowej sieci.
+    - **FreeRTOS Dual-Core:** Całkowita izolacja wątku radiowego (Core 0) od pętli generowania PWM serw (Core 1, 200 Hz).
+    - **Niezawodny Fail-Safe:** Twardy powrót do pozycji neutralnej (`1500 µs`) po 150 ms braku pakietu lub wyłączeniu przełącznika ARM (Kanał 5 / AUX1).
+    - **USB Transmitter Dongle:** Dedykowany wsad na drugie ESP32 zamieniający płytkę w bezprzewodowy mostek USB dla GCS.
+*   **Tier 2 Standard (V3 Full OSD & GPS / V2 / V1):**
+    - **Autokalibracja PCA9685 (`calibratePCA9685`):** Sprzężenie zwrotne korygujące częstotliwość wewnętrznego oscylatora PCA9685 (błąd < 3 us).
+    - **Strumieniowanie Wizji:** Klatki MJPEG przesyłane przez HTTP na porcie `81` (osobny wątek na rdzeniu 0).
+    - **Sterowanie UDP:** Odbiór komend sterujących na porcie `12345` oraz telemetria JSON na port `12347`.
+    - **Zabezpieczenia:** Watchdog sieciowy oraz Failsafe na 1500 us po 500 ms braku danych UDP.
 
 ---
 
