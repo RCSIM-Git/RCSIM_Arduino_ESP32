@@ -12,7 +12,8 @@
 enum TransportMode {
   TRANSPORT_ESP_NOW,
   TRANSPORT_SERIAL,
-  TRANSPORT_UDP
+  TRANSPORT_UDP,
+  TRANSPORT_MICROLINK_VPN
 };
 
 class CRSFTransport {
@@ -231,3 +232,115 @@ public:
     return WiFi.RSSI();
   }
 };
+
+// ---------------------------------------------------------------------------------
+// 4. MicroLink VPN Transport (Tailscale / WireGuard via CamM2325/microlink)
+// Umożliwia sterowanie przez Internet (4G LTE / Wi-Fi) bez publicznego IP
+// i bez przekierowywania portów za pośrednictwem wirtualnej sieci Tailnet.
+// ---------------------------------------------------------------------------------
+#if defined(ENABLE_MICROLINK_VPN)
+  #if __has_include(<microlink.h>)
+    #include <microlink.h>
+    #define MICROLINK_HEADER_AVAILABLE 1
+  #endif
+#endif
+
+class MicroLinkVPNTransport : public CRSFTransport {
+private:
+  WiFiUDP _udp;
+  uint16_t _listenPort;
+  IPAddress _gcsTailscaleIP;
+  uint16_t _gcsPort;
+  const char* _tailscaleAuthKey;
+  bool _vpnConnected;
+  uint8_t _packetBuf[256];
+  int _packetLen;
+  int _packetPos;
+
+public:
+  MicroLinkVPNTransport(
+    const char* tailscaleAuthKey = "tskey-auth-YOUR_KEY_HERE",
+    IPAddress gcsTailscaleIP = IPAddress(100, 64, 0, 1),
+    uint16_t listenPort = 12345,
+    uint16_t gcsPort = 12347
+  ) : _listenPort(listenPort), _gcsTailscaleIP(gcsTailscaleIP), _gcsPort(gcsPort),
+      _tailscaleAuthKey(tailscaleAuthKey), _vpnConnected(false),
+      _packetLen(0), _packetPos(0) {}
+
+  bool begin() override {
+    Serial.println("[MicroLink VPN] Inicjalizacja połączenia Tailscale...");
+
+    #if defined(MICROLINK_HEADER_AVAILABLE)
+      // Natywna inicjalizacja biblioteki MicroLink
+      microlink_config_t cfg = {
+        .auth_key = _tailscaleAuthKey,
+        .hostname = "rcsim-tier2-rover",
+        .routes = NULL,
+        .netif = NULL
+      };
+      esp_err_t err = microlink_init(&cfg);
+      if (err == ESP_OK) {
+        Serial.println("[MicroLink VPN] Dołączono do Tailnetu (WireGuard aktywny)!");
+        _vpnConnected = true;
+      } else {
+        Serial.printf("[MicroLink VPN] Błąd inicjalizacji Tailscale: 0x%x\n", err);
+        return false;
+      }
+    #else
+      Serial.println("[MicroLink VPN] Tryb Emulacji / Zewnętrznego Klienta Tailscale.");
+      Serial.println("[MicroLink VPN] Dołącz bibliotekę CamM2325/microlink do projektu ESP-IDF/Arduino.");
+      _vpnConnected = true;
+    #endif
+
+    // Otwarcie portu UDP nasłuchu na interfejsie wirtualnym VPN
+    if (_udp.begin(_listenPort)) {
+      Serial.printf("[MicroLink VPN] Nasłuch CRSF na porcie VPN UDP: %u\n", _listenPort);
+      return true;
+    }
+    return false;
+  }
+
+  int available() override {
+    if (_packetPos < _packetLen) {
+      return _packetLen - _packetPos;
+    }
+    _packetLen = _udp.parsePacket();
+    if (_packetLen > 0) {
+      _gcsTailscaleIP = _udp.remoteIP(); // Auto-uczenie adresu IP stacji GCS
+      if (_packetLen > (int)sizeof(_packetBuf)) _packetLen = sizeof(_packetBuf);
+      _udp.read(_packetBuf, _packetLen);
+      _packetPos = 0;
+      return _packetLen;
+    }
+    return 0;
+  }
+
+  uint8_t read() override {
+    if (_packetPos < _packetLen) {
+      return _packetBuf[_packetPos++];
+    }
+    return 0;
+  }
+
+  size_t write(const uint8_t *buffer, size_t size) override {
+    if (!_vpnConnected || !_gcsTailscaleIP) return 0;
+    _udp.beginPacket(_gcsTailscaleIP, _gcsPort);
+    size_t written = _udp.write(buffer, size);
+    _udp.endPacket();
+    return written;
+  }
+
+  void setGCSTailscaleTarget(IPAddress gcsIp, uint16_t port) {
+    _gcsTailscaleIP = gcsIp;
+    _gcsPort = port;
+  }
+
+  int8_t getRSSI() override {
+    return WiFi.RSSI();
+  }
+
+  uint8_t getLinkQuality() override {
+    return _vpnConnected ? 100 : 0;
+  }
+};
+

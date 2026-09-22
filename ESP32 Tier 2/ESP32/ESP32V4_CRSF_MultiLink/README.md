@@ -7,7 +7,8 @@ The **Tier 2 Pro (V4)** firmware for the **ESP32** microcontroller serves as an 
 - **Multi-layer Radio Communication**:
   - **ESP-NOW Link:** Ultra-low latency of **1–2 ms**, connection-less MAC layer protocol (no Wi-Fi router required, paired via MAC or broadcast).
   - **Hardware Serial:** Direct USB CDC connection with PC or UART link to external LoRa modules (e.g., SX1262 / SX1280).
-  - **UDP:** Traditional Wi-Fi network routing or LTE/GSM cellular bridge.
+  - **UDP:** Traditional Wi-Fi network routing or local LTE/GSM bridge.
+  - **MicroLink VPN (Tailscale / WireGuard):** Integrated support for [CamM2325/microlink](https://github.com/CamM2325/microlink) – secure remote driving over the Internet / 4G LTE with zero port-forwarding and no public IP needed!
 - **PCA9685 I2C Servo Controller:** 16-channel PWM servo & ESC outputs running on **Fast Mode (400 kHz)** with automatic bus recovery against EMI noise from electric motors.
 - **Full Sensor Telemetry Uplink (CRSF)**:
   - `0x1E Attitude`: Pitch, Roll, and Yaw angles from IMU (MPU6050 / MPU9250 with hardware DLPF filter).
@@ -38,8 +39,12 @@ The **Tier 2 Pro (V4)** firmware for the **ESP32** microcontroller serves as an 
 In `ESP32V4_CRSF_MultiLink.ino`, select your desired transport:
 
 ```cpp
-// Options: TRANSPORT_ESP_NOW, TRANSPORT_SERIAL, TRANSPORT_UDP
+// Options: TRANSPORT_ESP_NOW, TRANSPORT_SERIAL, TRANSPORT_UDP, TRANSPORT_MICROLINK_VPN
 #define ACTIVE_TRANSPORT     TRANSPORT_ESP_NOW
+
+// If using TRANSPORT_MICROLINK_VPN:
+#define TAILSCALE_AUTH_KEY   "tskey-auth-YOUR_AUTH_KEY_HERE"
+#define GCS_TAILSCALE_IP     IPAddress(100, 64, 0, 1) // Tailscale GCS IP
 ```
 
 ---

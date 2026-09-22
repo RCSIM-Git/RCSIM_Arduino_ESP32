@@ -7,7 +7,8 @@ Oprogramowanie układowe **Tier 2 Pro (V4)** dla mikrokontrolera **ESP32** to za
 - **Wielowarstwową komunikację radiową**:
   - **ESP-NOW** (opóźnienia rzędu 1–2 ms, brak konieczności routera Wi-Fi, bezpośrednie parowanie MAC).
   - **Hardware Serial** (USB CDC na PC lub mostek UART do zewnętrznych modułów LoRa SX1262/SX1280).
-  - **UDP** (tradycyjne Wi-Fi lub mostek GSM/LTE).
+  - **UDP** (tradycyjne Wi-Fi lub lokalny mostek GSM/LTE).
+  - **MicroLink VPN (Tailscale / WireGuard):** Pełna integracja z biblioteką [CamM2325/microlink](https://github.com/CamM2325/microlink) – bezpieczne sterowanie i telemetria przez Internet / 4G LTE bez publicznego IP i bez przekierowywania portów!
 - **Sterownik PCA9685**: Odświeżanie serw i regulatorów ESC na szynie I2C w trybie **Fast Mode (400 kHz)** z autoodzyskiwaniem w przypadku zakłóceń EMI.
 - **Wieloczujnikową telemetrię CRSF**:
   - `0x1E Attitude`: Przechyły Pitch/Roll z akcelerometru/żyroskopu IMU (MPU6050/MPU9250 z filtrem DLPF).
@@ -38,13 +39,18 @@ Oprogramowanie układowe **Tier 2 Pro (V4)** dla mikrokontrolera **ESP32** to za
 W pliku `ESP32V4_CRSF_MultiLink.ino` w sekcji nagłówkowej wybierasz tryb pracy:
 
 ```cpp
-// Dostępne opcje: TRANSPORT_ESP_NOW, TRANSPORT_SERIAL, TRANSPORT_UDP
+// Opcje: TRANSPORT_ESP_NOW, TRANSPORT_SERIAL, TRANSPORT_UDP, TRANSPORT_MICROLINK_VPN
 #define ACTIVE_TRANSPORT     TRANSPORT_ESP_NOW
+
+// Jeśli wybrano TRANSPORT_MICROLINK_VPN:
+#define TAILSCALE_AUTH_KEY   "tskey-auth-YOUR_AUTH_KEY_HERE"
+#define GCS_TAILSCALE_IP     IPAddress(100, 64, 0, 1) // IP stacji GCS w sieci Tailnet
 ```
 
-1. **ESP-NOW:** Domyślny i rekomendowany tryb. Daje najniższe możliwe opóźnienia i natychmiastową reakcję na drążek.
-2. **Serial:** Przeznaczony do połączenia kablem USB z PC (jako odbiornik/symulator) lub do podłączenia modułu LoRa UART.
-3. **UDP:** Przeznaczony do jazdy w istniejącej sieci Wi-Fi lub przez modem 4G/LTE.
+1. **ESP-NOW:** Domyślny i rekomendowany tryb do jazdy na torze. Daje najniższe możliwe opóźnienia (**1–2 ms**).
+2. **Serial:** Przeznaczony do połączenia kablem USB z PC lub modułów LoRa UART.
+3. **UDP:** Przeznaczony do jazdy w lokalnej sieci Wi-Fi.
+4. **MicroLink VPN:** Globalne sterowanie pojazdem przez sieć **Tailscale (WireGuard)** z dowolnego miejsca na świecie przez modem 4G/LTE lub mobilny hotspot!
 
 ---
 

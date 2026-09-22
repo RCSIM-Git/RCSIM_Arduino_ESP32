@@ -36,8 +36,16 @@
 #define FAILSAFE_TIMEOUT_MS  150    // 150 ms braku ramki -> natychmiastowy stop
 
 // --- WYBÓR WARSTWY TRANSMISYJNEJ ---
-// Dostępne opcje: TRANSPORT_ESP_NOW, TRANSPORT_SERIAL, TRANSPORT_UDP
+// Dostępne opcje:
+//   - TRANSPORT_ESP_NOW        (Ultra Low-Latency 1-2ms, p2p warstwa MAC, brak routera)
+//   - TRANSPORT_SERIAL         (USB CDC / UART do LoRa SX1262/SX1280)
+//   - TRANSPORT_UDP            (Lokalne Wi-Fi UDP)
+//   - TRANSPORT_MICROLINK_VPN  (Tailscale WireGuard VPN przez Internet / 4G LTE)
 #define ACTIVE_TRANSPORT     TRANSPORT_ESP_NOW
+
+// Konfiguracja dla trybu MicroLink VPN (Tailscale)
+#define TAILSCALE_AUTH_KEY   "tskey-auth-YOUR_AUTH_KEY_HERE"
+#define GCS_TAILSCALE_IP     IPAddress(100, 64, 0, 1) // Wirtualne IP stacji GCS w sieci Tailscale
 
 // Obiekty systemowe
 HardwareSerial GpsSerial(1);
@@ -51,6 +59,8 @@ SensorsManager sensors(GpsSerial, VBAT_ADC_PIN, VBAT_DIVIDER_RATIO);
   SerialTransport transport(Serial, 115200);
 #elif (ACTIVE_TRANSPORT == TRANSPORT_UDP)
   UDPTransport transport(12345, 12347);
+#elif (ACTIVE_TRANSPORT == TRANSPORT_MICROLINK_VPN)
+  MicroLinkVPNTransport transport(TAILSCALE_AUTH_KEY, GCS_TAILSCALE_IP, 12345, 12347);
 #endif
 
 // Kolejka kanałów RC przekazywana między rdzeniami
