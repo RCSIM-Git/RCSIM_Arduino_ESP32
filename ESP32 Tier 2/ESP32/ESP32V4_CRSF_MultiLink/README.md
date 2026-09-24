@@ -1,65 +1,74 @@
-# RCSIM - ESP32 Tier 2 Pro (CRSF Multi-Link Hub)
+# RCSIM - ESP32 Tier 2 Pro (CRSF Multi-Link Hub & Dual-Link Hybrid)
 
 ## 📌 Overview
 
-The **Tier 2 Pro (V4)** firmware for the **ESP32** microcontroller serves as an advanced onboard vehicle controller and telemetry hub for RC vehicles and rovers, featuring:
-- **Native CRSF Protocol (Crossfire / ExpressLRS)** with hardware-verified **CRC8 DVB-S2** (polynomial `0xD5`).
-- **Multi-layer Radio Communication**:
-  - **ESP-NOW Link:** Ultra-low latency of **1–2 ms**, connection-less MAC layer protocol (no Wi-Fi router required, paired via MAC or broadcast).
-  - **Hardware Serial:** Direct USB CDC connection with PC or UART link to external LoRa modules (e.g., SX1262 / SX1280).
-  - **UDP:** Traditional Wi-Fi network routing or local LTE/GSM bridge.
-  - **MicroLink VPN (Tailscale / WireGuard):** Integrated support for [CamM2325/microlink](https://github.com/CamM2325/microlink) – secure remote driving over the Internet / 4G LTE with zero port-forwarding and no public IP needed!
-- **PCA9685 I2C Servo Controller:** 16-channel PWM servo & ESC outputs running on **Fast Mode (400 kHz)** with automatic bus recovery against EMI noise from electric motors.
-- **Full Sensor Telemetry Uplink (CRSF)**:
-  - `0x1E Attitude`: Pitch, Roll, and Yaw angles from IMU (MPU6050 / MPU9250 with hardware DLPF filter).
-  - `0x02 GPS`: Latitude, Longitude, Groundspeed in km/h, Heading, Altitude, and Satellite count.
-  - `0x08 Battery`: Main pack voltage measured with exponential moving average (EMA) filter on ADC1.
-  - `0x14 Link Statistics`: RSSI (dBm) and Link Quality (LQI 0–100%).
-- **Hardware Fail-Safe & Dual-Core FreeRTOS**:
-  - Full decoupling of the radio communication thread (**Core 0**) from the real-time PWM servo loop (**Core 1**, 200 Hz).
-  - Automatic neutral override (`1500 µs`) upon 150 ms without packets or when the ARM switch (Channel 5 / AUX1) is DISARMED.
+The **Tier 2 Pro (V4)** firmware for the **ESP32** microcontroller serves as an advanced onboard vehicle controller, arbitration multiplexer, and telemetry hub for RC vehicles and rovers (such as the ARRMA Mojave 4S).
+
+It combines native **CRSF (Crossfire / ExpressLRS)** support with long-range remote driving over **5G Internet / Tailscale VPN**.
+
+### Key Features:
+1. **Dual-Link Hybrid Mode (Intelligent Muxer):**
+   - **Link 1: Direct RF Link (Ultra Low-Latency):** Local transmitter (e.g., RadioMaster MT12) paired with a **RadioMaster ER5C V2** receiver connected via hardware **UART (420,000 baud)**.
+   - **Link 2: Long-Range 5G Internet Link:** ESP32 connects to an onboard mobile Wi-Fi hotspot (e.g. Redmi 15 5G), receiving control packets from RCSIM GCS on PC over Tailscale VPN / UDP.
+   - **Automatic Arbiter:** Local RF takes priority by default. In case of RF signal loss (>150 ms) or transmitter shutdown, the vehicle smoothly transitions to 5G Internet control.
+   - **Transmitter Mode Switch (AUX2 / Channel 6):**
+     - High position (< 1300 µs): Force local RF only.
+     - Middle position (1300–1700 µs): AUTO Muxer mode (RF priority with 5G fallback).
+     - Low position (> 1700 µs): Force 5G Internet mode.
+2. **Bidirectional CRSF Telemetry:**
+   - Onboard sensors generate standard CRSF telemetry frames (`0x1E Attitude`, `0x08 Battery`, `0x02 GPS`, `0x14 Link Statistics`).
+   - Packets are dispatched **simultaneously**:
+     - Back to the ER5C V2 receiver over UART (displays battery voltage, GPS coords, and artificial horizon directly on the RadioMaster MT12 screen).
+     - Over 5G VPN / UDP to RCSIM PC GCS (for the PC HUD, dashboard, and Force Feedback).
+3. **PCA9685 I2C Servo Controller:**
+   - Directly drives steering servos and ESCs (Spektrum Firma / Hobbywing) via I2C Fast Mode (400 kHz) with automatic bus recovery.
+4. **Hardware Fail-Safe & Non-blocking Startup:**
+   - Hard fail-safe triggers neutral (`1500 µs`) if both links timeout (>150 ms) or if disarmed (Channel 5 / AUX1 < 1350 µs).
+   - Non-blocking Wi-Fi startup: the RF link functions from millisecond 1 after boot, even if the phone's hotspot is off or connecting in the background.
 
 ---
 
 ## 🔌 Hardware Pinout
 
-| Peripheral / Module | ESP32 Pin | Description / Notes |
-|---|---|---|
-| **I2C SDA** | `GPIO 13` | I2C Data bus (PCA9685, MPU6050/9250 IMU) |
-| **I2C SCL** | `GPIO 14` | I2C Clock bus (400 kHz Fast Mode) |
-| **PCA Calibration** | `GPIO 12` | Optional feedback loop from PCA9685 CH15 |
-| **GPS TX -> ESP32 RX** | `GPIO 32` (RX1) | NMEA Serial input (HardwareSerial 1, 9600-115200 bps) |
-| **Battery (VBAT)** | `GPIO 33` (ADC1) | Voltage divider R1=10k, R2=2.2k (~5.545 ratio) |
-| **Power Input** | `5V / VIN` | External 5V/2A BEC (never power solely from 3.3V) |
+| Peripheral / Module | ESP32 Pin | Module Pin | Description / Notes |
+|---|---|---|---|
+| **PCA9685 & IMU SDA** | `GPIO 13` | SDA | I2C Data bus (4.7k pull-up resistors recommended) |
+| **PCA9685 & IMU SCL** | `GPIO 14` | SCL | I2C Clock bus (400 kHz Fast Mode) |
+| **PCA Calibration** | `GPIO 12` | CH15 | Optional oscillator calibration feedback |
+| **ER5C V2 Receiver TX** | `GPIO 16` (RX2) | CRSF TX | Control frame input from ELRS receiver (420,000 bps) |
+| **ER5C V2 Receiver RX** | `GPIO 17` (TX2) | CRSF RX | Telemetry uplink back to MT12 transmitter |
+| **GPS TX (NMEA)** | `GPIO 32` (RX1) | TXD | GPS NMEA stream (9600 bps) |
+| **Battery (VBAT)** | `GPIO 33` (ADC1) | Divider | Voltage divider R1=10k, R2=2.2k (~5.545 ratio) |
+| **ESP32 Power** | `5V / VIN` | BEC 5V | External 5V/2-3A BEC (common GND with ESC and servo!) |
 
 ---
 
-## ⚙️ Transport Selection
+## ⚙️ RadioMaster ER5C V2 Setup (ExpressLRS)
 
-In `ESP32V4_CRSF_MultiLink.ino`, select your desired transport:
-
-```cpp
-// Options: TRANSPORT_ESP_NOW, TRANSPORT_SERIAL, TRANSPORT_UDP, TRANSPORT_MICROLINK_VPN
-#define ACTIVE_TRANSPORT     TRANSPORT_ESP_NOW
-
-// If using TRANSPORT_MICROLINK_VPN:
-#define TAILSCALE_AUTH_KEY   "tskey-auth-YOUR_AUTH_KEY_HERE"
-#define GCS_TAILSCALE_IP     IPAddress(100, 64, 0, 1) // Tailscale GCS IP
-```
+1. Access the ER5C V2 Web UI (via Wi-Fi or ExpressLRS Configurator).
+2. Under **Model / Hardware**:
+   - Set **Pin 1** as `CRSF TX` $\rightarrow$ connect to ESP32 `GPIO 16` (RX2).
+   - Set **Pin 2** as `CRSF RX` $\rightarrow$ connect to ESP32 `GPIO 17` (TX2).
+   - Baud rate: `420000`.
+3. In EdgeTX on the RadioMaster MT12, run *Telemetry -> Discover new sensors* to discover `RxBt`, `GPS`, `Pitch`, `Roll`, `Yaw`, and `RQly`.
 
 ---
 
-## 🛠️ Required Libraries (Arduino IDE Library Manager)
+## 🎮 Channel Mapping
 
+| Channel | Name | Function | Signal Range |
+|---|---|---|---|
+| **CH 1** | Steering | Steering Servo (PCA9685 CH0) | 1000 µs (left) – 1500 µs – 2000 µs (right) |
+| **CH 2** | Throttle | ESC Throttle/Brake (PCA9685 CH1) | 1000 µs (reverse) – 1500 µs (neutral) – 2000 µs (forward) |
+| **CH 5** | AUX 1 | Arming Switch (ARM) | > 1350 µs = ARMED, < 1350 µs = DISARMED (Safe stop) |
+| **CH 6** | AUX 2 | Muxer Switch (RF vs 5G) | < 1300 µs = Force RF, 1300-1700 = AUTO, > 1700 µs = Force 5G |
+
+---
+
+## 🛠️ Required Libraries
+
+In the Arduino IDE Library Manager:
 - **Adafruit PWM Servo Driver Library**
 - **Adafruit BusIO**
 - **TinyGPSPlus**
 - **MPU6050_light**
-
----
-
-## 🚀 Compiler Settings
-
-- **Board:** `ESP32 Dev Module` or `ESP32 Wrover Module`
-- **Partition Scheme:** `Huge APP (3MB No OTA/1MB SPIFFS)`
-- **Upload Speed:** `115200`

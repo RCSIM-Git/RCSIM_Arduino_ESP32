@@ -13,7 +13,7 @@
 - [x] **EdgeTX CRSF USB-VCP Full-Duplex Mod (RadioMaster Boxer, MT12, Pocket, TX12, TX16S, Zorro)**: Przygotowano zmodyfikowane wsady EdgeTX 2.10 (PR #7630 + patch `telemetrySetMirrorCb`) umożliwiające bezpośrednie sterowanie kanałami 1-16 (100 Hz) oraz zwrot pełnej telemetrii (Link Stats, Bateria, GPS, IMU) przez pojedynczy kabel USB-C bez zewnętrznych mostków. Dodano skrypty diagnostyczne w Pythonie oraz pełną dokumentację PL i ENG.
 
 ## 🏗️ Architektura i Rozwój
-- [x] **ESP32 Tier 2 Pro (CRSF Multi-Link Hub)**: Opracowano zaawansowany pokładowy hub sterowania łączący protokół CRSF (Crossfire / ELRS z sumą CRC8 DVB-S2), wielowarstwową komunikację (ESP-NOW z opóźnieniem 1-2 ms, Hardware Serial, UDP/LTE), sterownik PCA9685 (I2C 400kHz z autoodzyskiwaniem), sensorykę IMU (DLPF), GPS (NMEA) i ADC1 oraz sprzętowy Fail-Safe oparty na Dual-Core FreeRTOS.
+- [x] **ESP32 Tier 2 Pro (CRSF Multi-Link Hub & Dual-Link Hybrid)**: Opracowano zaawansowany pokładowy hub sterowania łączący protokół CRSF (Crossfire / ELRS z sumą CRC8 DVB-S2), wielowarstwową komunikację (ESP-NOW, Serial, UDP/LTE, Tailscale VPN) oraz sprzętowy Dual-Link Hybrid Muxer (jednoczesny odbiór z odbiornika ER5C V2 na UART 420k oraz 5G VPN przez hotspot z płynnym arbitrażem, histerezą stabilności i obustronnym dispatchowaniem telemetrii IMU/GPS/Bateria), sterownik PCA9685 (I2C 400kHz z autoodzyskiwaniem) oraz sprzętowy Fail-Safe oparty na Dual-Core FreeRTOS.
 - [ ] **WiFi Config Portal**: Dodać tryb AP z interfejsem WWW do konfiguracji SSID/Password bez reflashowania.
 - [ ] **OTA Updates**: Wdrożyć system aktualizacji Over-The-Air dla ESP32.
 
