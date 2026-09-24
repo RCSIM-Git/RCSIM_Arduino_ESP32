@@ -28,6 +28,38 @@ It combines native **CRSF (Crossfire / ExpressLRS)** support with long-range rem
 
 ---
 
+## 🛒 Bill of Materials (BOM)
+
+Complete list of components required to build the dual-link hybrid (RF + 5G/VPN) control system:
+
+### 1. Onboard Vehicle Electronics:
+| # | Component | Model / Spec | Qty | Function / Notes |
+|---|---|---|:---:|---|
+| 1 | **Microcontroller** | ESP32 DevKit V1 / WROOM-32 / WROVER / ESP32-S3 | 1 | Main onboard controller, FreeRTOS Dual-Core, Muxer |
+| 2 | **RF Receiver (ELRS)** | RadioMaster ER5C V2 (or ER4 / ER6 / RP1) | 1 | CRSF UART input (420k bd) & telemetry uplink to MT12 |
+| 3 | **Servo/ESC Driver** | PCA9685 (I2C 16-channel 12-bit PWM) | 1 | High-precision steering servo & ESC control |
+| 4 | **Power Supply (BEC)** | Step-Down Regulator / BEC 5V (min. 3A) | 1 | Clean 5V power for ESP32, PCA9685, and ER5C receiver |
+| 5 | **IMU Sensor** | MPU6050 (GY-521 / MPU9250) | 1 | Attitude telemetry (Pitch, Roll, Yaw) for artificial horizon |
+| 6 | **GPS Module** | Beitian BN-220 / BN-180 (or u-blox M8N) | 1 | Geo-coordinates, true ground speed, heading, and sats |
+| 7 | **Battery Divider** | Resistors: 10 kΩ (R1) + 2.2 kΩ (R2) 1% 0.25W | 1 set | Pack voltage measurement on ADC1 (GPIO 33) |
+| 8 | **Buffer Capacitor** | Electrolytic 470µF – 1000µF / 10V-16V Low-ESR | 1 | 5V rail filtering against servo brownout spikes |
+| 9 | **Wiring** | DuPont jumper wires (F-F / M-F) | 1 set | Signal connections for I2C, UART, power, and ground |
+
+### 2. Onboard Networking / FPV Video:
+| # | Component | Model / Spec | Qty | Function / Notes |
+|---|---|---|:---:|---|
+| 10 | **Onboard Smartphone** | Redmi 15 5G (or any Android 5G smartphone) | 1 | Wi-Fi hotspot for ESP32, WebRTC FPV camera, 5G Tailscale |
+| 11 | **Phone Mount** | 3D Printed / rigid chassis bracket | 1 | Secure phone mounting inside the ARRMA Mojave cockpit |
+
+### 3. Base Station / Driver Station (Home / PC):
+| # | Component | Model / Spec | Qty | Function / Notes |
+|---|---|---|:---:|---|
+| 12 | **Pistol Transmitter** | RadioMaster MT12 (ExpressLRS 2.4 GHz) | 1 | Local RF control or direct USB CRSF trainer link to PC |
+| 13 | **PC / Laptop** | Windows 10/11 or macOS with RCSIM GCS | 1 | Ground station, FPV video display, wheel/controller, HUD |
+| 14 | **VPN Software** | Tailscale (free personal account) | - | Encrypted P2P tunnel between PC and onboard phone |
+
+---
+
 ## 🔌 Hardware Pinout
 
 | Peripheral / Module | ESP32 Pin | Module Pin | Description / Notes |

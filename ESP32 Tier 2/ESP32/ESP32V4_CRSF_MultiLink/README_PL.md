@@ -30,6 +30,38 @@ Oprogramowanie układowe **Tier 2 Pro (V4)** dla mikrokontrolera **ESP32** to za
 
 ---
 
+## 🛒 Lista Materiałów i Komponentów (BOM - Bill of Materials)
+
+Poniższa lista zawiera kompletny spis części potrzebnych do zrealizowania hybrydowego sterowania (RF + 5G/VPN) w modelu ARRMA Mojave 4S:
+
+### 1. Elektronika w pojeździe (Pokładowa):
+| Lp. | Komponent | Model / Oznaczenie | Ilość | Rola / Zastosowanie |
+|---|---|---|:---:|---|
+| 1 | **Mikrokontroler** | ESP32 DevKit V1 / WROOM-32 / WROVER / ESP32-S3 | 1 szt. | Główny kontroler pokładowy, FreeRTOS Dual-Core, Muxer |
+| 2 | **Odbiornik RF (ELRS)** | RadioMaster ER5C V2 (lub ER4 / ER6 / RP1) | 1 szt. | Odbiór bezpośredniego sygnału radiowego CRSF (420k bd) i zwrot telemetrii |
+| 3 | **Sterownik serw/ESC** | PCA9685 (I2C 16-kanałowy PWM 12-bit) | 1 szt. | Precyzyjne sterowanie serwem skrętu i regulatorem ESC |
+| 4 | **Zasilanie elektroniki (BEC)** | Przetwornica Step-Down / BEC 5V (min. 3A) | 1 szt. | Zasilanie 5V dla ESP32, PCA9685 i odbiornika ER5C (z baterii modelu) |
+| 5 | **Czujnik IMU (Żyroskop)** | MPU6050 (lub GY-521 / MPU9250) | 1 szt. | Telemetria przechyłów (Pitch, Roll, Yaw) do sztucznego horyzontu |
+| 6 | **Moduł GPS** | Beitian BN-220 / BN-180 (lub u-blox M8N) | 1 szt. | Pozycja geograficzna, prędkość rzeczywista, kurs i satelity |
+| 7 | **Dzielnik napięcia baterii** | Rezystory: 10 kΩ (R1) + 2.2 kΩ (R2) 1% 0.25W | 1 kpl. | Pomiar napięcia głównego pakietu napędowego na pinie ADC1 (GPIO 33) |
+| 8 | **Kondensator buforowy** | Elektrolityczny 470µF – 1000µF / 10V-16V Low-ESR | 1 szt. | Filtracja zasilania szyny 5V/VCC (ochrona przed spadkami napięcia od serwa) |
+| 9 | **Okablowanie** | Przewody DuPont żeńsko-żeńskie / męsko-żeńskie | 1 kpl. | Połączenia sygnałowe I2C, UART, zasilania i masy |
+
+### 2. Łączność Internetowa / Wideo (Pokładowa):
+| Lp. | Komponent | Model / Oznaczenie | Ilość | Rola / Zastosowanie |
+|---|---|---|:---:|---|
+| 10 | **Smartfon pokładowy** | Redmi 15 5G (lub dowolny smartfon z 5G i Androidem) | 1 szt. | Hotspot Wi-Fi dla ESP32, kamera FPV (WebRTC) i modem 5G (Tailscale VPN) |
+| 11 | **Uchwyt telefonu** | Wydruk 3D / sztywny uchwyt montażowy w budzie | 1 szt. | Bezpieczne zamocowanie telefonu wewnątrz kokpitu ARRMA Mojave |
+
+### 3. Stanowisko Bazowe / Kierowcy (Dom / PC):
+| Lp. | Komponent | Model / Oznaczenie | Ilość | Rola / Zastosowanie |
+|---|---|---|:---:|---|
+| 12 | **Aparatura pistoletowa** | RadioMaster MT12 (wersja ExpressLRS 2.4 GHz) | 1 szt. | Sterowanie bezpośrednie RF lub podpięcie do PC kablem USB w trybie CRSF |
+| 13 | **Komputer PC / Laptop** | Windows 10/11 lub macOS z oprogramowaniem RCSIM GCS | 1 szt. | Stacja bazowa, odbiór wideo FPV, sterowanie kierownicą/padem, HUD |
+| 14 | **Oprogramowanie VPN** | Tailscale (darmowe konto personal) | - | Szyfrowany tunel P2P między PC a telefonem w aucie (bez publicznego IP) |
+
+---
+
 ## 🔌 Schemat Połączeń (Pinout)
 
 | Peryferium / Moduł | Pin ESP32 | Pin Modułu | Opis / Uwagi |
