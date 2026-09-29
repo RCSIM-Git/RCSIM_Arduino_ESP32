@@ -12,7 +12,7 @@
 
 ## 🚀 Przegląd i Kluczowe Korzyści
 
-Oprogramowanie zamienia aparaturę RadioMaster w **dwukierunkowy transceiver CRSF o zerowej latencji**, wykorzystujący pojedynczy fabryczny kabel USB-C:
+Oprogramowanie zamienia aparaturę RadioMaster w **dwukierunkowy transceiver CRSF przez USB-VCP**, wykorzystujący pojedynczy fabryczny kabel USB-C:
 
 1. **Bezpośrednie sterowanie z PC (RX 100–250 Hz):**
    Komputer (aplikacja **RCSIM-GCS**) przesyła standardowe ramki CRSF (kanały 1–16) bezpośrednio po wirtualnym porcie szeregowym USB-C (VCP) do miksera EdgeTX i modułu nadawczego.
@@ -128,10 +128,11 @@ Przed uruchomieniem RCSIM-GCS możesz sprawdzić dwukierunkową komunikację:
 
 ---
 
-## 📜 Informacje Techniczne, Kod Źródłowy i Licencja GPLv3
+## 📜 Informacje Techniczne, Kod Źródłowy i Licencja
 
 - **Baza EdgeTX:** Gałąź EdgeTX 2.10 development, PR **#7630** (`feat/crsf-trainer-over-usb-vcp`, commit `e5784ee5`).
 - **Modyfikacja Telemetrii:** Integracja `telemetrySetMirrorCb` przekierowująca strumień telemetrii do bufora VCP TX.
-- **Kod Źródłowy (Zgodność z GPLv3):** Zgodnie z wymogami licencji GNU GPLv3, pełny zestaw modyfikacji w kodzie C++ wprowadzonych względem EdgeTX został udostępniony w niniejszym repozytorium w postaci pliku patch: [`edgetx_crsf_vcp_full_duplex.patch`](./edgetx_crsf_vcp_full_duplex.patch).
+- **Patch z modyfikacjami:** Zmiany wprowadzone względem upstream EdgeTX są udokumentowane w pliku [`edgetx_crsf_vcp_full_duplex.patch`](./edgetx_crsf_vcp_full_duplex.patch). Sam patch dokumentuje modyfikacje, ale nie stanowi samodzielnie pełnego kodu źródłowego odpowiadającego dystrybuowanym binarkom.
 - **Oficjalne Repozytorium EdgeTX:** Kod źródłowy projektu macierzystego znajduje się na [EdgeTX/edgetx](https://github.com/EdgeTX/edgetx).
-- **Licencja:** GNU General Public License v3.0 (GPLv3). Oprogramowanie dystrybuowane bez jakiejkolwiek gwarancji.
+- **Pełny odpowiadający kod źródłowy:** Aby przygotować kompletne drzewo źródeł użyte do budowy tych binariów, uruchom [`prepare_source.sh`](./prepare_source.sh) — skrypt klonuje EdgeTX na commitcie `e5784ee5` (gałąź `feat/crsf-trainer-over-usb-vcp`), inicjalizuje submoduły i nakłada patch full-duplex. Powstałe archiwum (`edgetx-crsf-vcp-fullduplex-source.tar.gz`) wraz z [`BUILD_INSTRUCTIONS.md`](./BUILD_INSTRUCTIONS.md) — dokumentującym dokładne komendy CMake dla każdego z siedmiu modeli aparatur — stanowi pełny odpowiadający kod źródłowy tych binariów, włącznie ze skryptami sterującymi kompilacją.
+- **Licencja:** Niniejsze kompilacje to nieoficjalne, zmodyfikowane wersje [EdgeTX](https://github.com/EdgeTX/edgetx), dystrybuowane na licencji [GNU General Public License v2.0 (GPL-2.0)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html). **Nie są to oficjalne wydania EdgeTX.** Oprogramowanie dystrybuowane bez jakiejkolwiek gwarancji.

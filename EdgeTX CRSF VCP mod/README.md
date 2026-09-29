@@ -11,7 +11,7 @@
 
 ## 🚀 Overview & Key Advantages
 
-This custom EdgeTX firmware turns your RadioMaster transmitter into a **bidirectional, zero-latency CRSF transceiver** over a single standard USB-C cable:
+This custom EdgeTX firmware turns your RadioMaster transmitter into a **bidirectional USB-VCP CRSF transceiver** over a single standard USB-C cable:
 
 1. **Direct PC Control (100–250 Hz RX):**
    Your PC (running **RCSIM-GCS** or custom control software) transmits standard CRSF frames (Channels 1–16) directly over the USB-C Virtual COM Port (VCP) into the radio's mixer and RF module.
@@ -128,10 +128,11 @@ To verify both control input and return telemetry before launching RCSIM-GCS:
 
 ---
 
-## 📜 Technical Details, Source Code & GPLv3 Licensing
+## 📜 Technical Details, Source Code & License
 
 - **EdgeTX Version:** Based on EdgeTX 2.10 development tree, PR **#7630** (`feat/crsf-trainer-over-usb-vcp`, commit `e5784ee5`).
 - **Telemetry Patch:** Integrates `telemetrySetMirrorCb` hook routing incoming CRSF telemetry directly to the USB-VCP TX endpoint buffer.
-- **Source Code (GPLv3 Compliance):** In strict accordance with the GNU General Public License v3, the complete source code modifications applied to the upstream EdgeTX codebase are provided in this repository as a standard patch file: [`edgetx_crsf_vcp_full_duplex.patch`](./edgetx_crsf_vcp_full_duplex.patch).
-- **Upstream Source Code Reference:** EdgeTX upstream repository is hosted at [EdgeTX/edgetx](https://github.com/EdgeTX/edgetx).
-- **License:** GNU General Public License v3.0 (GPLv3). Distributed without warranty of any kind.
+- **Modifications Patch:** The changes applied on top of the upstream EdgeTX codebase are documented in [`edgetx_crsf_vcp_full_duplex.patch`](./edgetx_crsf_vcp_full_duplex.patch). This patch documents the modifications but is not the complete corresponding source for the distributed binaries on its own.
+- **Upstream Source Code:** EdgeTX upstream repository is hosted at [EdgeTX/edgetx](https://github.com/EdgeTX/edgetx).
+- **Complete Corresponding Source:** To prepare the full source tree used to build these binaries, run [`prepare_source.sh`](./prepare_source.sh), which clones EdgeTX at commit `e5784ee5` (branch `feat/crsf-trainer-over-usb-vcp`), initialises submodules, and applies the full-duplex patch. The resulting source archive (`edgetx-crsf-vcp-fullduplex-source.tar.gz`) together with [`BUILD_INSTRUCTIONS.md`](./BUILD_INSTRUCTIONS.md) — which documents the exact CMake commands for each of the seven radio targets — constitutes the complete corresponding source code for these binaries, including the scripts used to control compilation.
+- **License:** These are unofficial modified builds of [EdgeTX](https://github.com/EdgeTX/edgetx), distributed under the [GNU General Public License v2.0 (GPL-2.0)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html). **These builds are not official EdgeTX releases.** Distributed without warranty of any kind.
