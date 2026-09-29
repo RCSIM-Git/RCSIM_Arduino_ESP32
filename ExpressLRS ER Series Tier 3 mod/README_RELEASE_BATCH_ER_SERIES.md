@@ -48,17 +48,15 @@ W modelach **ER6** oraz **ER8** (ESP32) podłączenie jest jeszcze wygodniejsze 
 
 ---
 
-## 📜 Kod Źródłowy, Patch i Licencja GNU GPLv3
+## 📜 Kod Źródłowy i Licencja GNU GPLv2
 
-- **Projekt bazowy:** [ExpressLRS/ExpressLRS](https://github.com/ExpressLRS/ExpressLRS) (gałąź `master`, commit bazowy `5909f77`).
-- **Zgodność z GPLv3 (Kod źródłowy):** Zgodnie z sekcją 6 licencji GNU General Public License v3.0, pełny zestaw modyfikacji w kodzie źródłowym C++ i JavaScript (obsługa IMU MPU9250/MPU6050, Auto-Baudrate GPS, ochrona pinu PWM dla regulatora ESC na CH2 oraz rozpięcie parowania UART w WebUI) udostępniony jest w postaci pliku patch:
-  [`elrs_v4.1_er5cv2_gps_imu.patch`](./elrs_v4.1_er5cv2_gps_imu.patch)
-- **Aplikacja patcha na czyste repozytorium ExpressLRS:**
-  ```bash
-  git clone https://github.com/ExpressLRS/ExpressLRS.git
-  cd ExpressLRS
-  git checkout 5909f77
-  git apply elrs_v4.1_er5cv2_gps_imu.patch
-  ```
-- **Licencja:** GNU General Public License v3.0 (GPLv3).
+- **Projekt bazowy:** [ExpressLRS/ExpressLRS](https://github.com/ExpressLRS/ExpressLRS) (commit bazowy `5909f77`).
+- **Kompletny kod źródłowy (GPL-2.0 §3):** Pełne drzewo kodu źródłowego zawierające wszystkie modyfikacje C++ i WebUI (`src/lib/IMU/`, Auto-Baudrate GPS, ochrona ESC PWM na CH2/GPIO1, uncoupling w WebUI) dostępne jest w repozytorium:
+  - Repozytorium: [RCSIM-Git/expresslrs-er-series-telemetry](https://github.com/RCSIM-Git/expresslrs-er-series-telemetry)
+  - Gałąź: `feat/rm-er-series-gps-imu-telemetry`
+  - Trwały commit: [`de876c0286c2788b4e02fac267078c374501f0ec`](https://github.com/RCSIM-Git/expresslrs-er-series-telemetry/commit/de876c0286c2788b4e02fac267078c374501f0ec)
+  - Wszystkie opublikowane w tym pakiecie pliki binarne zostały skompilowane z tego pojedynczego stanu źródeł.
+- **Instrukcja kompilacji:** Zobacz [`BUILD_INSTRUCTIONS.md`](./BUILD_INSTRUCTIONS.md) dla szczegółowej procedury budowy w PlatformIO.
+- **Plik patch:** [`elrs_v4.1_er5cv2_gps_imu.patch`](./elrs_v4.1_er5cv2_gps_imu.patch) jest również dołączony pomocniczo.
+- **Licencja:** GNU General Public License v2.0 (GPL-2.0), zgodnie z licencją projektu nadrzędnego ExpressLRS.
 - **Zastrzeżenie (Disclaimer):** Niniejsze oprogramowanie stanowi niezależną, społecznościową modyfikację opracowaną na potrzeby projektu RCSIM. Oprogramowanie jest rozpowszechniane bez jakiejkolwiek gwarancji (AS IS). Autorzy nie ponoszą odpowiedzialności za jakiekolwiek szkody powstałe w wyniku jego użytkowania w modelach RC. Znaki towarowe ExpressLRS oraz RadioMaster należą do ich prawnych właścicieli.
