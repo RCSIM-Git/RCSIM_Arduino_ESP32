@@ -2,8 +2,8 @@
 
 > These instructions document how to reproduce the `.bin` and `.bin.gz` firmware binaries
 > distributed for the RadioMaster ER Series receivers (ER4, ER5A/C, ER6, ER8) from the corresponding
-> source code. Together with the complete source tree, they satisfy the build instructions
-> requirement of the GNU General Public License v2.0 (GPL-2.0 §3).
+> source code. Together with the complete source tree, they satisfy the Corresponding Source and build
+> instructions requirements of the GNU General Public License v3.0 (GPL-3.0 §6).
 
 ---
 

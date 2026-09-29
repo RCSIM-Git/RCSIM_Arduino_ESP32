@@ -5,7 +5,7 @@
 - **IMU Dedicated (MPU9250):** [Polski 🇵🇱](README_PL_RadioMaster_ER5Cv2_IMU.md) | [English 🇬🇧](README_EN_RadioMaster_ER5Cv2_IMU.md)
 - **Source Code Developer Patch Guides:** [GPS Patch Guide](PATCH_INSTRUCTIONS_GPS.md) | [IMU Patch Guide](PATCH_INSTRUCTIONS.md)
 - **Unified Git Patch:** [`elrs_v4.1_er5cv2_gps_imu.patch`](./elrs_v4.1_er5cv2_gps_imu.patch)
-- **Source Code Repository (GPL-2.0):** [expresslrs-er-series-telemetry](https://github.com/RCSIM-Git/expresslrs-er-series-telemetry) | [Build Instructions](BUILD_INSTRUCTIONS.md)
+- **Source Code Repository (GPLv3):** [expresslrs-er-series-telemetry](https://github.com/RCSIM-Git/expresslrs-er-series-telemetry) | [Build Instructions](BUILD_INSTRUCTIONS.md)
 
 ---
 
@@ -152,14 +152,16 @@ When the receiver has not yet locked valid NMEA sentences (`validPacketsCount ==
 
 ---
 
+## 📜 Source Code, Git Patch & GNU GPLv3 License
+
 - **Base Project:** [ExpressLRS/ExpressLRS](https://github.com/ExpressLRS/ExpressLRS) (base commit `5909f77`).
-- **Corresponding Source Code (GPL-2.0 §3):** Complete corresponding source code containing all C++ and WebUI modifications (`src/lib/IMU/`, `SerialGPS` auto-baudrate, ESC PWM safety on CH2/GPIO1, and WebUI uncoupling) is available at:
+- **Corresponding Source Code (GPLv3 §6):** Complete corresponding source code containing all C++ and WebUI modifications (`src/lib/IMU/`, `SerialGPS` auto-baudrate, ESC PWM safety on CH2/GPIO1, and WebUI uncoupling) is available at:
   - Repository: [RCSIM-Git/expresslrs-er-series-telemetry](https://github.com/RCSIM-Git/expresslrs-er-series-telemetry)
   - Branch: `feat/rm-er-series-gps-imu-telemetry`
   - Permanent Commit: [`de876c0286c2788b4e02fac267078c374501f0ec`](https://github.com/RCSIM-Git/expresslrs-er-series-telemetry/commit/de876c0286c2788b4e02fac267078c374501f0ec)
   - All distributed firmware binaries in this release batch were compiled from this single source state.
 - **Build Instructions:** See [`BUILD_INSTRUCTIONS.md`](./BUILD_INSTRUCTIONS.md) for full compilation steps using PlatformIO.
 - **Git Patch:** [`elrs_v4.1_er5cv2_gps_imu.patch`](./elrs_v4.1_er5cv2_gps_imu.patch) is also provided for convenience.
-- **License:** GNU General Public License v2.0 (GPL-2.0), matching the upstream ExpressLRS license.
+- **License:** GNU General Public License v3.0 (GPLv3), matching the upstream ExpressLRS license.
 - **Disclaimer:** This software is an independent community modification developed for the RCSIM project and is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. ExpressLRS and RadioMaster are registered or unregistered trademarks of their respective owners.
 
