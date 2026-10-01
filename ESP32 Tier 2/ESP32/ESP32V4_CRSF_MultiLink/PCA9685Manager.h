@@ -37,6 +37,14 @@ public:
     Wire.setClock(400000); // Fast Mode 400 kHz
     Wire.setTimeOut(10);   // 10 ms limit oczekiwania chroniący przed zawieszeniem
 
+    // Sprawdzenie i aktywacja huba Grove TCA9548A (jeśli obecny na szynie pod 0x70)
+    Wire.beginTransmission(0x70);
+    if (Wire.endTransmission() == 0) {
+      Wire.beginTransmission(0x70);
+      Wire.write(0xFF); // Włączenie wszystkich 8 portów Grove równolegle
+      Wire.endTransmission();
+    }
+
     // Szybki skan szyny I2C pod adresem 0x40
     Wire.beginTransmission(PCA9685_I2C_ADDR);
     if (Wire.endTransmission() != 0) {
@@ -97,6 +105,15 @@ public:
       Wire.begin(_sdaPin, _sclPin);
       Wire.setClock(400000);
       Wire.setTimeOut(10);
+
+      // Ponowna aktywacja TCA9548A jeśli występuje na szynie
+      Wire.beginTransmission(0x70);
+      if (Wire.endTransmission() == 0) {
+        Wire.beginTransmission(0x70);
+        Wire.write(0xFF);
+        Wire.endTransmission();
+      }
+
       _pca.begin();
       _pca.setPWMFreq(SERVO_FREQ_HZ);
       triggerFailsafe();

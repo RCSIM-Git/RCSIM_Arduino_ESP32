@@ -40,26 +40,26 @@
 // 2. KONFIGURACJA PINÓW I SPRZĘTU
 // =================================================================================
 
-// I2C (PCA9685 + IMU MPU6050/MPU9250)
-#define I2C_SDA_PIN          13
-#define I2C_SCL_PIN          14
+// I2C (Grove TCA9548A Hub 0x70, Grove PCA9685 0x40, Grove LSM6DS3 0x6A)
+#define I2C_SDA_PIN          8      // ESP32-S3 GPIO 8 (SDA) -> Terminal Shield ARK
+#define I2C_SCL_PIN          9      // ESP32-S3 GPIO 9 (SCL) -> Terminal Shield ARK
 #define PCA_CALIB_CH         15
-#define PCA_CALIB_PIN        12
+#define PCA_CALIB_PIN        -1     // Opcjonalny (-1 = wyłączony)
 
-// UART dla GPS (TinyGPS++)
-#define GPS_RX_PIN           32
-#define GPS_TX_PIN           -1
+// UART dla Grove GPS Air530 (NMEA 9600 baud, TinyGPS++)
+#define GPS_RX_PIN           18     // ESP32-S3 RX1 <- Grove GPS TXD
+#define GPS_TX_PIN           17     // ESP32-S3 TX1 -> Grove GPS RXD
 #define GPS_BAUDRATE         9600
 
-// UART dla Lokalnego Odbiornika ELRS (RadioMaster ER5C V2 / XR4 / Nano RX)
-// Standardowy protokół CRSF działa z prędkością 420 000 baud
-#define CRSF_RF_RX_PIN       16   // ESP32 RX2 <- Odbiornik TX (CRSF out)
-#define CRSF_RF_TX_PIN       17   // ESP32 TX2 -> Odbiornik RX (CRSF telemetria in)
+// UART dla Odbiornika ELRS (RadioMaster ER3C-i / ER5C-i dla aparatury MT12)
+// Standardowy protokół CRSF działa z prędkością 420 000 baud (lub 115 200)
+#define CRSF_RF_RX_PIN       15     // ESP32-S3 RX2 <- Odbiornik TX (CRSF out)
+#define CRSF_RF_TX_PIN       16     // ESP32-S3 TX2 -> Odbiornik RX (CRSF telemetria in)
 #define CRSF_RF_BAUDRATE     420000
 
-// Dzielnik napięcia baterii (ADC1 - bezpieczny przy aktywnym Wi-Fi)
-#define VBAT_ADC_PIN         33
-#define VBAT_DIVIDER_RATIO   5.545f // (10k + 2.2k) / 2.2k
+// Dzielnik napięcia baterii (ADC1 - bezpieczny z Wi-Fi i wolny od szyny Octal Flash/PSRAM)
+#define VBAT_ADC_PIN         1      // ESP32-S3 GPIO 1 (ADC1_CH0)
+#define VBAT_DIVIDER_RATIO   5.545f // Dzielnik np. R1=10k, R2=2.2k (dla pakietu 4S LiPo w Mojave)
 
 // Watchdog i Fail-Safe
 #define WDT_TIMEOUT_SECONDS  2

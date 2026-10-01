@@ -30,100 +30,132 @@ Oprogramowanie układowe **Tier 2 Pro (V4)** dla mikrokontrolera **ESP32** to za
 
 ---
 
-## 🛒 Lista Materiałów i Komponentów (BOM - Bill of Materials)
+## 🛒 Lista Materiałów i Komponentów (BOM — Stan Fizyczny z Paczek)
 
-Poniższa lista zawiera kompletny spis części potrzebnych do zrealizowania hybrydowego sterowania (RF + 5G/VPN) w modelu ARRMA Mojave 4S:
+Poniższa lista odzwierciedla **fizycznie dostarczone i zweryfikowane komponenty** dla projektu **ARRMA Mojave 4S / 5G** w ramach ekosystemu RCSIM:
 
-### 1. Elektronika w pojeździe (Pokładowa):
+### 1. Aparatura i Łączność RC:
 | Lp. | Komponent | Model / Oznaczenie | Ilość | Rola / Zastosowanie |
 |---|---|---|:---:|---|
-| 1 | **Mikrokontroler** | ESP32 DevKit V1 / WROOM-32 / WROVER / ESP32-S3 | 1 szt. | Główny kontroler pokładowy, FreeRTOS Dual-Core, Muxer |
-| 2 | **Odbiornik RF (ELRS)** | RadioMaster ER5C V2 (lub ER4 / ER6 / RP1) | 1 szt. | Odbiór bezpośredniego sygnału radiowego CRSF (420k bd) i zwrot telemetrii |
-| 3 | **Sterownik serw/ESC** | PCA9685 (I2C 16-kanałowy PWM 12-bit) | 1 szt. | Precyzyjne sterowanie serwem skrętu i regulatorem ESC |
-| 4 | **Zasilanie elektroniki (BEC)** | Przetwornica Step-Down / BEC 5V (min. 3A) | 1 szt. | Zasilanie 5V dla ESP32, PCA9685 i odbiornika ER5C (z baterii modelu) |
-| 5 | **Czujnik IMU (Żyroskop)** | MPU6050 (lub GY-521 / MPU9250) | 1 szt. | Telemetria przechyłów (Pitch, Roll, Yaw) do sztucznego horyzontu |
-| 6 | **Moduł GPS** | Beitian BN-220 / BN-180 (lub u-blox M8N) | 1 szt. | Pozycja geograficzna, prędkość rzeczywista, kurs i satelity |
-| 7 | **Dzielnik napięcia baterii** | Rezystory: 10 kΩ (R1) + 2.2 kΩ (R2) 1% 0.25W | 1 kpl. | Pomiar napięcia głównego pakietu napędowego na pinie ADC1 (GPIO 33) |
-| 8 | **Kondensator buforowy** | Elektrolityczny 470µF – 1000µF / 10V-16V Low-ESR | 1 szt. | Filtracja zasilania szyny 5V/VCC (ochrona przed spadkami napięcia od serwa) |
-| 9 | **Okablowanie** | Przewody DuPont żeńsko-żeńskie / męsko-żeńskie | 1 kpl. | Połączenia sygnałowe I2C, UART, zasilania i masy |
+| 01 | **Aparatura pistoletowa RC** | **RadioMaster MT12 ELRS 2.4 GHz** | 1 zest. | Nadajnik kierowcy (EdgeTX + wbudowany moduł ExpressLRS) |
+| 02 | **Odbiorniki modelarskie** | **RadioMaster ER3C-i** oraz **ER5C-i** | po 1 szt. | Odbiór CRSF (420 000 bps) i zwrotna telemetria pokładowa |
 
-### 2. Łączność Internetowa / Wideo (Pokładowa):
+### 2. Główny Sterownik i Elektronika Pokładowa (Ekosystem Grove / I2C):
 | Lp. | Komponent | Model / Oznaczenie | Ilość | Rola / Zastosowanie |
 |---|---|---|:---:|---|
-| 10 | **Smartfon pokładowy** | Redmi 15 5G (lub dowolny smartfon z 5G i Androidem) | 1 szt. | Hotspot Wi-Fi dla ESP32, kamera FPV (WebRTC) i modem 5G (Tailscale VPN) |
-| 11 | **Uchwyt telefonu** | Wydruk 3D / sztywny uchwyt montażowy w budzie | 1 szt. | Bezpieczne zamocowanie telefonu wewnątrz kokpitu ARRMA Mojave |
+| 03 | **Mikrokontroler główny** | **ESP32-S3 DevKit (N8R8 / N16R8 Waveshare)** | 1 szt. | Dual-Link Muxer, FreeRTOS Dual-Core, Wi-Fi 5G + UART |
+| 04 | **Terminal Shield** | **Adapter 44-pin ze złączami śrubowymi ARK** | 1 szt. | Wyprowadzenie pinów bez lutowania, odporne na wstrząsy |
+| 05 | **Multiplexer I2C** | **Grove Hub I2C TCA9548A (8 portów)** | 1 szt. | Separacja szyny I2C i bezproblemowe łączenie peryferiów |
+| 06 | **Sterownik serw i ESC** | **Grove PCA9685 (16-kanałowy PWM 12-bit)** | 1 szt. | Precyzyjne sterowanie serwem skrętu i regulatorem ESC |
+| 07 | **Czujnik IMU 6-DoF** | **Grove LSM6DS3 (akcelerometr + żyroskop)** | 1 szt. | Telemetria przechyłów (Pitch/Roll/Yaw) i przeciążeń |
+| 08 | **Moduł nawigacji GPS** | **Grove GPS Air530 z anteną ceramiczną** | 1 szt. | Pozycja, prędkość rzeczywista, kurs (NMEA 9600 bps) |
+| 09 | **Adapter zaciskowy** | **Grove 4-pin → terminal śrubowy ARK** | 1 szt. | Bezlutowe wyprowadzenie sygnałów zewnętrznych |
 
-### 3. Stanowisko Bazowe / Kierowcy (Dom / PC):
+### 3. Zasilanie, Okablowanie i Mechanika:
 | Lp. | Komponent | Model / Oznaczenie | Ilość | Rola / Zastosowanie |
 |---|---|---|:---:|---|
-| 12 | **Aparatura pistoletowa** | RadioMaster MT12 (wersja ExpressLRS 2.4 GHz) | 1 szt. | Sterowanie bezpośrednie RF lub podpięcie do PC kablem USB w trybie CRSF |
-| 13 | **Komputer PC / Laptop** | Windows 10/11 lub macOS z oprogramowaniem RCSIM GCS | 1 szt. | Stacja bazowa, odbiór wideo FPV, sterowanie kierownicą/padem, HUD |
-| 14 | **Oprogramowanie VPN** | Tailscale (darmowe konto personal) | - | Szyfrowany tunel P2P między PC a telefonem w aucie (bez publicznego IP) |
+| 10 | **Powerbank pokładowy** | **everActive EB-22QB 20 000 mAh (20W PD/QC)** | 1 szt. | Niezależne zasilanie ESP32-S3 i smartfona 5G |
+| 11 | **Kable USB-C** | 1x kątowy 90° 30 cm (telefon) + 1x prosty 30 cm (ESP) | 2 szt. | Zasilanie urządzeń wewnątrz kokpitu bez naprężeń |
+| 12 | **Wiązki sygnałowe** | Grove 4-pin F-F (5 szt.) + Grove→Dupont + Dupont F-F | 1 kpl. | Szyna Grove I2C, sygnały UART i CRSF |
+| 13 | **Przedłużacze JR** | 30 cm 22AWG płaskie MSP | 2 szt. | Połączenie serwa skrętu i regulatora ESC do PCA9685 |
+| 14 | **Obudowa ochronna** | **Pawbol S-Box 216C IP65 (120×80×50 mm)** | 1 szt. | Ochrona elektroniki przed kurzem, błotem i wodą |
+| 15 | **Dławiki i montaż** | Dławiki PG7 IP68 + Rzep **3M Dual Lock SJ3550** | 1 kpl. | Szczelne przejścia kablowe i antywibracyjny montaż |
+| 16 | **Stanowisko 5G FPV** | SmallRig 2164 + uchwyt telefonu + cooler Peltiera | 1 kpl. | Montaż smartfona na MT12 ze stałym chłodzeniem |
 
 ---
 
-## 🔌 Schemat Połączeń (Pinout)
+## 🔌 Schemat Połączeń Śrubowych (ESP32-S3 Terminal Shield 44-pin)
 
-| Peryferium / Moduł | Pin ESP32 | Pin Modułu | Opis / Uwagi |
-|---|---|---|---|
-| **PCA9685 & IMU SDA** | `GPIO 13` | SDA | Szyna danych I2C (z rezystorami pull-up 4.7k) |
-| **PCA9685 & IMU SCL** | `GPIO 14` | SCL | Szyna zegara I2C (Fast Mode 400 kHz) |
-| **PCA Kalibracja** | `GPIO 12` | CH15 | Opcjonalne sprzężenie zwrotne do autokalibracji |
-| **Odbiornik ER5C V2 TX** | `GPIO 16` (RX2) | CRSF TX | Odbiór ramek sterujących CRSF (420 000 bps) |
-| **Odbiornik ER5C V2 RX** | `GPIO 17` (TX2) | CRSF RX | Wysyłanie telemetrii do aparatury MT12 |
-| **GPS TX (NMEA)** | `GPIO 32` (RX1) | TXD | Odbiór danych GPS (9600 bps, NMEA) |
-| **Bateria (VBAT)** | `GPIO 33` (ADC1) | Dzielnik | Dzielnik napięcia R1=10k, R2=2.2k (ratio 5.545) |
-| **Zasilanie ESP32** | `5V / VIN` | BEC 5V | Zewnętrzny BEC 5V/2-3A (wspólna masa GND z ESC i serwem!) |
+Wszystkie połączenia peryferyjne realizowane są na **złączach śrubowych ARK Terminal Shielda**:
 
-> [!IMPORTANT]
-> **Masa (GND)** wszystkich komponentów (ESP32, odbiornik ER5C V2, PCA9685, regulator ESC, czujnik IMU, GPS) **musi być połączona wspólnie**.
+| Peryferium / Moduł | Zacisk Shielda | Pin ESP32-S3 | Sygnał / Standard | Opis i Uwagi |
+|---|---|---|---|---|
+| **Grove TCA9548A Hub** | `SDA` | `GPIO 8` | I2C Data | Linia danych I2C (wspólna dla TCA9548A, PCA, IMU) |
+| **Grove TCA9548A Hub** | `SCL` | `GPIO 9` | I2C Clock | Linia zegara I2C Fast Mode (400 kHz) |
+| **Grove TCA9548A Hub** | `3V3` / `5V` | `3.3V` lub `5V` | VCC | Zasilanie logiki modułów Grove |
+| **Wspólna Masa** | `GND` | `GND` | Ground | **Kluczowa wspólna masa** (ESP, PCA, ESC, BEC) |
+| **Grove Air530 GPS** | `18` | `GPIO 18` (RX1) | UART RX <- GPS TX | Odbiór ramek NMEA (9600 bps) |
+| **Grove Air530 GPS** | `17` | `GPIO 17` (TX1) | UART TX -> GPS RX | Konfiguracja modułu GPS (opcjonalna) |
+| **Odbiornik ER3C-i / ER5C-i** | `15` | `GPIO 15` (RX2) | CRSF RX <- Odb. TX | Odbiór sterowania CRSF z MT12 (420 000 bps) |
+| **Odbiornik ER3C-i / ER5C-i** | `16` | `GPIO 16` (TX2) | CRSF TX -> Odb. RX | Zwrotna telemetria CRSF na ekran aparatury |
+| **Dzielnik Baterii (VBAT)** | `1` | `GPIO 1` (ADC1) | Analog IN (0-3.3V) | Pomiar pakietu 4S LiPo (dzielnik R1=10k, R2=2.2k) |
+| **Zasilanie ESP32-S3** | `USB-C` | Port USB ESP32 | 5V DC (Power Delivery) | Bezpośrednio z powerbanku everActive EB-22QB |
 
----
-
-## ⚙️ Konfiguracja Odbiornika RadioMaster ER5C V2 (ExpressLRS)
-
-Aby odbiornik ER5C V2 przekazywał ramki CRSF do ESP32:
-1. Połącz się z panelem Web UI odbiornika (przez Wi-Fi ExpressLRS lub aplikację ExpressLRS Configurator).
-2. W zakładce **Model / Hardware**:
-   - Ustaw **Pin 1 (lub dedykowany pin)** jako `CRSF TX` $\rightarrow$ połącz z `GPIO 16` (RX2) w ESP32.
-   - Ustaw **Pin 2 (lub dedykowany pin)** jako `CRSF RX` $\rightarrow$ połącz z `GPIO 17` (TX2) w ESP32.
-   - Baud rate: `420000` (domyślny CRSF).
-3. Po włączeniu zasilania aparatura MT12 natychmiast wykryje sensory telemetryczne (w menu aparatury: *Telemetry -> Discover new sensors* znajdziesz `RxBt`, `GPS`, `Pitch`, `Roll`, `Yaw`, `RQly`).
+> [!CAUTION]
+> **Ochrona pamięci Octal Flash/PSRAM w ESP32-S3:**
+> Płytki N8R8 i N16R8 wykorzystują piny `GPIO 33, 34, 35, 36, 37` do wewnętrznej magistrali szybkiej pamięci SPI. **Kategorycznie zabrania się podłączania czegokolwiek do tych pinów!** Pomiar baterii został bezpiecznie przeniesiony na kanał `ADC1_CH0` (`GPIO 1`).
 
 ---
 
-## 📱 Konfiguracja Telefonu (Redmi 15 5G) i Sieci
+## 🎛️ Podłączenie Modułów na Szynie Grove I2C
 
-1. **Hotspot Wi-Fi:**
-   - Włącz hotspot osobisty w telefonie.
-   - Ustaw SSID i Hasło zgodnie ze stałymi w pliku `ESP32V4_CRSF_MultiLink.ino`:
-     ```cpp
-     const char* WIFI_SSID     = "Redmi_Hotspot";
-     const char* WIFI_PASSWORD = "twoje_haslo";
-     ```
-2. **Kamera i Wideo FPV:**
-   - Telefon umieszczony w kokpicie auta transmituje strumień wideo o niskim opóźnieniu (WebRTC) bezpośrednio do stacji RCSIM na PC.
-3. **Tailscale VPN (Dostęp przez Internet):**
-   - Na telefonie i na PC domowym zainstaluj aplikację **Tailscale**.
-   - ESP32 po połączeniu z hotspotem komunikuje się w wirtualnej sieci Tailnet (bez potrzeby publicznego adresu IP na karcie SIM).
+```
+[ ESP32-S3 DevKit ]
+  (GPIO 8: SDA) ────┐
+  (GPIO 9: SCL) ────┼───> [ Grove TCA9548A I2C Hub (0x70) ]
+  (3V3 / GND)   ────┘          │
+                               ├── Port 0: [ Grove PCA9685 (0x40) ]
+                               │             ├── CH0: Serwo skrętu ARRMA (JR)
+                               │             └── CH1: Regulator ESC Spektrum Firma (JR)
+                               │
+                               └── Port 1: [ Grove LSM6DS3 IMU (0x6A) ]
+                                             └── Sztuczny horyzont, przeciążenia G
+```
+
+1. **Grove PCA9685:**
+   - Wpięty przewodem Grove do **Portu 0** w hubie TCA9548A.
+   - Kanał 0 (`CH0`): Serwo skrętu przedniej osi (przewód JR 3-pin).
+   - Kanał 1 (`CH1`): Regulator ESC Spektrum Firma (przewód JR 3-pin).
+   - Szyna zasilania serw (`V+` na PCA9685) zasilana jest z wbudowanego BEC regulatora ESC lub dedykowanego BEC 6.0V/7.4V.
+2. **Grove LSM6DS3:**
+   - Wpięty przewodem Grove do **Portu 1** w hubie TCA9548A.
+   - Zamontowany płasko i sztywno na płycie podwozia za pomocą taśmy 3M Dual Lock.
+3. **Grove GPS Air530:**
+   - Podłączony do portu UART1 (`GPIO 18 RX`, `GPIO 17 TX`) za pomocą przejściówki Grove → Dupont / Terminal.
+   - Ceramiczna antena GPS skierowana poziomo ku górze.
 
 ---
 
-## 🎮 Przypisanie Kanałów
+## ⚙️ Konfiguracja Odbiorników RadioMaster ER3C-i / ER5C-i (CRSF)
 
-| Kanał | Nazwa | Funkcja | Zakres wartości |
-|---|---|---|---|
-| **CH 1** | Steering | Skręt kół (Serwo na CH0 PCA9685) | 1000 µs (lewo) – 1500 µs – 2000 µs (prawo) |
-| **CH 2** | Throttle | Gaz / Hamulec (ESC na CH1 PCA9685) | 1000 µs (wstecz) – 1500 µs (neutral) – 2000 µs (pełny gaz) |
-| **CH 5** | AUX 1 | Uzbrojenie (ARM Switch) | > 1350 µs = ARMED, < 1350 µs = DISARMED (Stop) |
-| **CH 6** | AUX 2 | Przełącznik Muxera (Radio vs 5G) | < 1300 µs = Wymuś RF, 1300-1700 = AUTO, > 1700 µs = Wymuś 5G |
+1. Połącz się ze smartfona z punktem dostępowym Wi-Fi odbiornika (hasło domyślne: `expresslrs`).
+2. Przejdź w przeglądarce pod adres `http://10.0.0.1`.
+3. W zakładce **Model / Hardware**:
+   - Skonfiguruj wyjście szeregowe na tryb **CRSF**:
+     * `Pin TX` (CRSF Out) $\rightarrow$ podłącz do `GPIO 15` (RX2) w shieldzie ESP32-S3.
+     * `Pin RX` (CRSF In / Telemetry) $\rightarrow$ podłącz do `GPIO 16` (TX2) w shieldzie ESP32-S3.
+     * Baudrate: `420000` (lub `115200` jeśli preferowane).
+4. Po zbindowaniu z aparaturą RadioMaster MT12 wejdź w menu aparatury:
+   - *Model Setup* $\rightarrow$ *Telemetry* $\rightarrow$ *Discover new sensors*.
+   - Natychmiast pojawią się sensory pokładowe:
+     * `RxBt` (Napięcie głównego pakietu napędowego 4S)
+     * `GPS` (Koordynaty, prędkość, kurs)
+     * `Ptch`, `Roll`, `Yaw` (Kąty pochylenia z Grove LSM6DS3)
+     * `RQly` (Jakość sygnału radiowego)
 
 ---
 
-## 🛠️ Wymagane Biblioteki
+## 🔋 Zasilanie z Powerbanku everActive EB-22QB
 
-W Arduino IDE Library Manager:
-- **Adafruit PWM Servo Driver Library**
-- **Adafruit BusIO**
-- **TinyGPSPlus**
-- **MPU6050_light** (jeśli używany MPU6050)
+1. **Port USB-C 1:** Podłączony kablem USB-C (30 cm) do złącza zasilania płytki **ESP32-S3 DevKit**.
+2. **Port USB-C 2:** Podłączony kablem kątowym 90° (30 cm) do smartfona FPV z kartą 5G T-Mobile.
+3. **Masa układu:** Czarny przewód masy z regulatora ESC / złącza zasilania serw musi być wpięty w zacisk `GND` Terminal Shielda ARK, aby zapewnić wspólny punkt odniesienia sygnałów PWM i UART.
+
+---
+
+## 🎮 Przypisanie Kanałów w Aparaturze MT12
+
+| Kanał | Nazwa | Funkcja | Zakres sygnału | Stan Fail-Safe / DISARM |
+|---|---|---|---|---|
+| **CH 1** | Steering | Skręt kół (CH0 PCA9685) | 1000 µs – 1500 µs – 2000 µs | `1500 µs` (Koła na wprost) |
+| **CH 2** | Throttle | Gaz / Hamulec (CH1 PCA9685) | 1000 µs – 1500 µs – 2000 µs | `1500 µs` (Hamulec neutralny) |
+| **CH 5** | AUX 1 | Uzbrojenie (ARM Switch) | > 1350 µs = ARMED, < 1350 µs = STOP | `1000 µs` (Blokada napędu) |
+| **CH 6** | AUX 2 | Przełącznik Muxera (Radio / 5G) | < 1300 µs: RF, 1300-1700: AUTO, > 1700 µs: 5G | Tryb AUTO (Fallback na 5G) |
+
+---
+
+## 🛠️ Wymagane Biblioteki w Arduino IDE
+
+- **Adafruit PWM Servo Driver Library** (do sterownika PCA9685)
+- **TinyGPSPlus** (do dekodowania strumienia NMEA z Grove Air530)
+*(Sterownik Grove LSM6DS3 oraz obsługa huba Grove TCA9548A są wbudowane bezpośrednio w firmware i nie wymagają instalowania zewnętrznych bibliotek!)*
