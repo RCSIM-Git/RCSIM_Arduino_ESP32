@@ -19,14 +19,23 @@ These builds unlock real-time vehicle telemetry for autonomous and teleoperated 
 
 ---
 
-## 🛠️ Available Firmware Releases
+## 🛠️ Available Firmware Releases & Nomenclature
 
-| Firmware File | Type | Flashing Method | Features | Recommended Use |
+Firmware files are systematized into three distinct categories:
+1. **`..._GPS` (GPS Dedicated):** Standalone GPS NMEA auto-baudrate telemetry (PR #3798). Frees CH2 for PWM motor ESC without IMU dependencies.
+2. **`..._IMU` (IMU Dedicated):** Standalone I2C MPU6050/9250 AHRS telemetry (CRSF frame `0x1E Attitude`).
+3. **`..._RCSIM_GPS_IMU` (RCSIM Hybrid All-In-One):** Full combo firmware designed for RCSIM autonomous teleoperation and MonacoSLAM, combining GPS on CH3 + PWM ESC on CH2 + I2C MPU6050/9250 on CH4/CH5.
+
+| Firmware File | Mod Category | Flashing Method | Features | Target Architecture |
 | :--- | :--- | :--- | :--- | :--- |
-| **`ELRS_V4.1_RadioMaster_ER5Cv2_GPS_IMU.bin.gz`** | All-In-One | **OTA Wi-Fi WebUI** | GPS + IMU + PWM | **Standard Tier 3 (Recommended)** |
-| **`ELRS_V4.1_RadioMaster_ER5Cv2_GPS_IMU.bin`** | All-In-One | **FTDI UART (`esptool.py`)** | GPS + IMU + PWM | Wired recovery / initial flash |
-| **`ELRS_V4.1_RadioMaster_ER5Cv2_MPU9250.bin.gz`** | IMU Dedicated | **OTA Wi-Fi WebUI** | IMU + PWM | Setup with IMU only |
-| **`ELRS_V4.1_RadioMaster_ER5Cv2_MPU9250.bin`** | IMU Dedicated | **FTDI UART (`esptool.py`)** | IMU + PWM | Wired recovery |
+| **`ELRS_V4.1_RadioMaster_ER5Cv2_RCSIM_GPS_IMU.bin.gz`** | **RCSIM Combo** | **OTA Wi-Fi WebUI** | GPS + IMU + PWM ESC | **RCSIM Tier 3 (Recommended)** |
+| `ELRS_V4.1_RadioMaster_ER5Cv2_RCSIM_GPS_IMU.bin` | **RCSIM Combo** | FTDI UART (`esptool.py`) | GPS + IMU + PWM ESC | Wired recovery / initial flash |
+| **`ELRS_V4.1_RadioMaster_ER5Cv2_GPS.bin.gz`** | **GPS Dedicated** | **OTA Wi-Fi WebUI** | GPS + PWM ESC | Clean PR #3798 (No IMU) |
+| `ELRS_V4.1_RadioMaster_ER5Cv2_GPS.bin` | **GPS Dedicated** | FTDI UART (`esptool.py`) | GPS + PWM ESC | Wired recovery (No IMU) |
+| **`ELRS_V4.1_RadioMaster_ER5Cv2_IMU.bin.gz`** | **IMU Dedicated** | **OTA Wi-Fi WebUI** | IMU + PWM | Standalone AHRS (No GPS) |
+| `ELRS_V4.1_RadioMaster_ER5Cv2_IMU.bin` | **IMU Dedicated** | FTDI UART (`esptool.py`) | IMU + PWM | Wired recovery (No IMU) |
+
+*(For the complete RadioMaster ER series: ER4, ER5, ER6, ER8 with RCSIM Combo firmware, see [README_RELEASE_BATCH_ER_SERIES.md](./README_RELEASE_BATCH_ER_SERIES.md))*
 
 ---
 

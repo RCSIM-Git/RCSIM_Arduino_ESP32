@@ -8,17 +8,19 @@ Niniejszy pakiet zawiera zmodyfikowany firmware **ExpressLRS v4.1.0** z natywną
 
 Wszystkie pliki zostały przygotowane jako oficjalne pakiety **Unified Configuration** (posiadają wstrzykniętą fabryczną mapę pinów, profile mocy nadawania RF oraz bezpieczne domyślne opcje, gotowe do wgrania przez stronę Wi-Fi WebUI):
 
-| Model Odbiornika | MCU | Format WebUI OTA | Format bezpośredni (FTDI/esptool) | Główne cechy sprzętowe |
+| Model Odbiornika | MCU | Typ Oprogramowania | Format WebUI OTA (.bin.gz) | Format bezpośredni (.bin) |
 | :--- | :---: | :--- | :--- | :--- |
-| **RadioMaster ER4** | ESP8285 | [`ELRS_V4.1_RadioMaster_ER4_GPS_IMU.bin.gz`](file:///c:/Users/Mateusz/Desktop/er5c/release/ELRS_V4.1_RadioMaster_ER4_GPS_IMU.bin.gz) | `ELRS_V4.1_RadioMaster_ER4_GPS_IMU.bin` | 4x PWM, lekki odbiornik samolotowy/kołowy |
-| **RadioMaster ER5A / ER5C (V1)** | ESP8285 | [`ELRS_V4.1_RadioMaster_ER5A_C_GPS_IMU.bin.gz`](file:///c:/Users/Mateusz/Desktop/er5c/release/ELRS_V4.1_RadioMaster_ER5A_C_GPS_IMU.bin.gz) | `ELRS_V4.1_RadioMaster_ER5A_C_GPS_IMU.bin` | 5x PWM |
-| **RadioMaster ER5A / ER5C (V2)** | ESP8285 | [`ELRS_V4.1_RadioMaster_ER5Cv2_GPS_IMU.bin.gz`](file:///c:/Users/Mateusz/Desktop/er5c/release/ELRS_V4.1_RadioMaster_ER5Cv2_GPS_IMU.bin.gz) | `ELRS_V4.1_RadioMaster_ER5Cv2_GPS_IMU.bin` | 5x PWM, zoptymalizowany dzielnik Vbat |
-| **RadioMaster ER6** | ESP32 | [`ELRS_V4.1_RadioMaster_ER6_GPS_IMU.bin.gz`](file:///c:/Users/Mateusz/Desktop/er5c/release/ELRS_V4.1_RadioMaster_ER6_GPS_IMU.bin.gz) | `ELRS_V4.1_RadioMaster_ER6_GPS_IMU.bin` | 6x PWM, True Diversity, UART + I2C |
-| **RadioMaster ER6-G** | ESP32 | [`ELRS_V4.1_RadioMaster_ER6G_GPS_IMU.bin.gz`](file:///c:/Users/Mateusz/Desktop/er5c/release/ELRS_V4.1_RadioMaster_ER6G_GPS_IMU.bin.gz) | `ELRS_V4.1_RadioMaster_ER6G_GPS_IMU.bin` | 6x PWM, zintegrowany Vario / Baro |
-| **RadioMaster ER6-GV** | ESP32 | [`ELRS_V4.1_RadioMaster_ER6GV_GPS_IMU.bin.gz`](file:///c:/Users/Mateusz/Desktop/er5c/release/ELRS_V4.1_RadioMaster_ER6GV_GPS_IMU.bin.gz) | `ELRS_V4.1_RadioMaster_ER6GV_GPS_IMU.bin` | 6x PWM, Vario + wejście pomiaru Vbat |
-| **RadioMaster ER8** | ESP32 | [`ELRS_V4.1_RadioMaster_ER8_GPS_IMU.bin.gz`](file:///c:/Users/Mateusz/Desktop/er5c/release/ELRS_V4.1_RadioMaster_ER8_GPS_IMU.bin.gz) | `ELRS_V4.1_RadioMaster_ER8_GPS_IMU.bin` | 8x PWM, True Diversity |
-| **RadioMaster ER8-G** | ESP32 | [`ELRS_V4.1_RadioMaster_ER8G_GPS_IMU.bin.gz`](file:///c:/Users/Mateusz/Desktop/er5c/release/ELRS_V4.1_RadioMaster_ER8G_GPS_IMU.bin.gz) | `ELRS_V4.1_RadioMaster_ER8G_GPS_IMU.bin` | 8x PWM, zintegrowany Vario / Baro |
-| **RadioMaster ER8-GV** | ESP32 | [`ELRS_V4.1_RadioMaster_ER8GV_GPS_IMU.bin.gz`](file:///c:/Users/Mateusz/Desktop/er5c/release/ELRS_V4.1_RadioMaster_ER8GV_GPS_IMU.bin.gz) | `ELRS_V4.1_RadioMaster_ER8GV_GPS_IMU.bin` | 8x PWM, Vario + wejście pomiaru Vbat |
+| **RadioMaster ER4** | ESP8285 | **RCSIM Combo** | `ELRS_V4.1_RadioMaster_ER4_RCSIM_GPS_IMU.bin.gz` | `ELRS_V4.1_RadioMaster_ER4_RCSIM_GPS_IMU.bin` |
+| **RadioMaster ER5A / ER5C (V1)** | ESP8285 | **RCSIM Combo** | `ELRS_V4.1_RadioMaster_ER5A_C_RCSIM_GPS_IMU.bin.gz` | `ELRS_V4.1_RadioMaster_ER5A_C_RCSIM_GPS_IMU.bin` |
+| **RadioMaster ER5A / ER5C (V2)** | ESP8285 | **RCSIM Combo** | `ELRS_V4.1_RadioMaster_ER5Cv2_RCSIM_GPS_IMU.bin.gz` | `ELRS_V4.1_RadioMaster_ER5Cv2_RCSIM_GPS_IMU.bin` |
+| **RadioMaster ER5A / ER5C (V2)** | ESP8285 | **GPS Only** | `ELRS_V4.1_RadioMaster_ER5Cv2_GPS.bin.gz` | `ELRS_V4.1_RadioMaster_ER5Cv2_GPS.bin` |
+| **RadioMaster ER5A / ER5C (V2)** | ESP8285 | **IMU Only** | `ELRS_V4.1_RadioMaster_ER5Cv2_IMU.bin.gz` | `ELRS_V4.1_RadioMaster_ER5Cv2_IMU.bin` |
+| **RadioMaster ER6** | ESP32 | **RCSIM Combo** | `ELRS_V4.1_RadioMaster_ER6_RCSIM_GPS_IMU.bin.gz` | `ELRS_V4.1_RadioMaster_ER6_RCSIM_GPS_IMU.bin` |
+| **RadioMaster ER6-G** | ESP32 | **RCSIM Combo** | `ELRS_V4.1_RadioMaster_ER6G_RCSIM_GPS_IMU.bin.gz` | `ELRS_V4.1_RadioMaster_ER6G_RCSIM_GPS_IMU.bin` |
+| **RadioMaster ER6-GV** | ESP32 | **RCSIM Combo** | `ELRS_V4.1_RadioMaster_ER6GV_RCSIM_GPS_IMU.bin.gz` | `ELRS_V4.1_RadioMaster_ER6GV_RCSIM_GPS_IMU.bin` |
+| **RadioMaster ER8** | ESP32 | **RCSIM Combo** | `ELRS_V4.1_RadioMaster_ER8_RCSIM_GPS_IMU.bin.gz` | `ELRS_V4.1_RadioMaster_ER8_RCSIM_GPS_IMU.bin` |
+| **RadioMaster ER8-G** | ESP32 | **RCSIM Combo** | `ELRS_V4.1_RadioMaster_ER8G_RCSIM_GPS_IMU.bin.gz` | `ELRS_V4.1_RadioMaster_ER8G_RCSIM_GPS_IMU.bin` |
+| **RadioMaster ER8-GV** | ESP32 | **RCSIM Combo** | `ELRS_V4.1_RadioMaster_ER8GV_RCSIM_GPS_IMU.bin.gz` | `ELRS_V4.1_RadioMaster_ER8GV_RCSIM_GPS_IMU.bin` |
 
 ---
 

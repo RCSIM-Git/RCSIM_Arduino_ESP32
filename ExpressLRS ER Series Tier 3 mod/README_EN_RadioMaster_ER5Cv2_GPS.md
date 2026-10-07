@@ -74,16 +74,18 @@ The **RadioMaster ER5C V2** receiver features 5 standard 3-pin RC servo pin head
 
 ### Method A: Wireless OTA via Wi-Fi WebUI (Recommended)
 1. Connect to the WebUI (`http://10.0.0.1/#update`).
-2. Under **Firmware Update**, select:
-   `ELRS_V4.1_RadioMaster_ER5Cv2_GPS_IMU.bin.gz`
+2. Under **Firmware Update**, select the appropriate package:
+   - **`ELRS_V4.1_RadioMaster_ER5Cv2_RCSIM_GPS_IMU.bin.gz`** (Recommended for RCSIM – simultaneous GPS and IMU AHRS support)
+   - **`ELRS_V4.1_RadioMaster_ER5Cv2_GPS.bin.gz`** (Dedicated GPS only – clean PR #3798 without IMU code)
 3. Click **Update** and wait ~20 seconds for the flash to finish and the device to reboot.
 
 ### Method B: FTDI USB-UART Flasher (esptool.py)
 1. Hold down the **BOOT** button on the bottom of the ER5C V2 while plugging the FTDI adapter into your computer's USB port.
 2. Run in terminal (replace `COMX` with your FTDI port):
 ```powershell
-esptool.py --port COMX --baud 115200 --chip esp8266 write_flash -fm dout 0x00000 ELRS_V4.1_RadioMaster_ER5Cv2_GPS_IMU.bin
+esptool.py --port COMX --baud 115200 --chip esp8266 write_flash -fm dout 0x00000 ELRS_V4.1_RadioMaster_ER5Cv2_RCSIM_GPS_IMU.bin
 ```
+*(or `ELRS_V4.1_RadioMaster_ER5Cv2_GPS.bin` for GPS-only variant)*
 
 ---
 

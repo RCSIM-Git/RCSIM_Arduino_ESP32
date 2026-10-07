@@ -74,16 +74,18 @@ Odbiornik **RadioMaster ER5C V2** posiada 5 standardowych złączy serw modelars
 
 ### Metoda A: Aktualizacja bezprzewodowa przez Wi-Fi WebUI (Rekomendowana)
 1. Połącz się z WebUI odbiornika (`http://10.0.0.1/#update`).
-2. W sekcji **Firmware Update** kliknij **Wybierz plik** i wskaż:
-   `ELRS_V4.1_RadioMaster_ER5Cv2_GPS_IMU.bin.gz`
+2. W sekcji **Firmware Update** kliknij **Wybierz plik** i wskaż odpowiedni pakiet:
+   - **`ELRS_V4.1_RadioMaster_ER5Cv2_RCSIM_GPS_IMU.bin.gz`** (Zalecany dla RCSIM – jednoczesna obsługa GPS i IMU AHRS)
+   - **`ELRS_V4.1_RadioMaster_ER5Cv2_GPS.bin.gz`** (Dedykowany tylko pod GPS – czysty oficjalny PR #3798 bez modułu IMU)
 3. Kliknij **Update** i odczekaj ok. 15-30 sekund na ukończenie flashowania i restart urządzenia.
 
 ### Metoda B: Przez kabel FTDI USB-UART (esptool.py)
 1. Wciśnij i przytrzymaj przycisk **BOOT** na spodzie ER5C V2 podczas podłączania programatora FTDI do portu USB komputera.
 2. Wpisz w terminalu (zamieniając `COMX` na właściwy port):
 ```powershell
-esptool.py --port COMX --baud 115200 --chip esp8266 write_flash -fm dout 0x00000 ELRS_V4.1_RadioMaster_ER5Cv2_GPS_IMU.bin
+esptool.py --port COMX --baud 115200 --chip esp8266 write_flash -fm dout 0x00000 ELRS_V4.1_RadioMaster_ER5Cv2_RCSIM_GPS_IMU.bin
 ```
+*(lub `ELRS_V4.1_RadioMaster_ER5Cv2_GPS.bin` dla wariantu tylko z GPS)*
 
 ---
 

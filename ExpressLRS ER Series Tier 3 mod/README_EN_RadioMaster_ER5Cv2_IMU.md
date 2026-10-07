@@ -56,14 +56,14 @@ The **RadioMaster ER5C V2** receiver provides 5 PWM servo output headers. We ass
 ### Method A: Over-The-Air (OTA) via WebUI (Recommended)
 1. Connect to the receiver's WebUI (`http://10.0.0.1` or `http://elrs_rx.local`).
 2. Navigate to the **Update** tab (`http://10.0.0.1/#update`).
-3. Select the file: `ELRS_V4.1_RadioMaster_ER5Cv2_MPU9250.bin.gz`.
+3. Select the file: `ELRS_V4.1_RadioMaster_ER5Cv2_IMU.bin.gz`.
 4. Click **Update** and wait for the flash process to finish and the device to restart.
 
 ### Method B: Wired via FTDI USB-UART Adapter
 1. Press and hold the **BOOT** pad/button on the underside of the ER5C V2 receiver while connecting the FTDI adapter to your PC.
 2. Run `esptool.py` (replace `COMX` with your serial COM port):
 ```powershell
-esptool.py --port COMX --baud 115200 --chip esp8266 write_flash -fm dout 0x00000 ELRS_V4.1_RadioMaster_ER5Cv2_MPU9250.bin
+esptool.py --port COMX --baud 115200 --chip esp8266 write_flash -fm dout 0x00000 ELRS_V4.1_RadioMaster_ER5Cv2_IMU.bin
 ```
 
 ---

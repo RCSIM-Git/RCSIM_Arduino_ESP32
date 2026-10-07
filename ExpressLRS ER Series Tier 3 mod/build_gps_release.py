@@ -24,8 +24,8 @@ if not os.path.exists(bin_source) and os.path.exists(gz_source):
     with open(bin_source, 'wb') as f_out:
         f_out.write(decompressed_data)
 
-bin_release = os.path.join(release_dir, "ELRS_V4.1_RadioMaster_ER5Cv2_GPS_IMU.bin")
-gz_release = os.path.join(release_dir, "ELRS_V4.1_RadioMaster_ER5Cv2_GPS_IMU.bin.gz")
+bin_release = os.path.join(release_dir, "ELRS_V4.1_RadioMaster_ER5Cv2_RCSIM_GPS_IMU.bin")
+gz_release = os.path.join(release_dir, "ELRS_V4.1_RadioMaster_ER5Cv2_RCSIM_GPS_IMU.bin.gz")
 
 with open(bin_source, "rb") as f_in:
     firmware_data = f_in.read()
@@ -82,8 +82,8 @@ print(f"BIN: {bin_release} ({os.path.getsize(bin_release)} bytes)")
 print(f"GZ:  {gz_release} ({os.path.getsize(gz_release)} bytes)")
 
 # Copy to RCSIM repository folder
-repo_bin = os.path.join(target_repo_dir, "ELRS_V4.1_RadioMaster_ER5Cv2_GPS_IMU.bin")
-repo_gz = os.path.join(target_repo_dir, "ELRS_V4.1_RadioMaster_ER5Cv2_GPS_IMU.bin.gz")
+repo_bin = os.path.join(target_repo_dir, "ELRS_V4.1_RadioMaster_ER5Cv2_RCSIM_GPS_IMU.bin")
+repo_gz = os.path.join(target_repo_dir, "ELRS_V4.1_RadioMaster_ER5Cv2_RCSIM_GPS_IMU.bin.gz")
 
 shutil.copy2(bin_release, repo_bin)
 shutil.copy2(gz_release, repo_gz)

@@ -83,6 +83,9 @@ ExpressLRS Unified binaries require appending receiver-specific hardware layout 
 
 Run the automated build & release packager:
 ```bash
-python build_gps_release.py
+python package_rcsim_er_series.py
 ```
-This script injects the target layout JSON (e.g. for RadioMaster ER4, ER5Cv2, ER6, ER8) and compresses the finalized binaries into `.bin` and `.bin.gz` formats ready for OTA Wi-Fi WebUI flashing or direct FTDI UART upload via `esptool.py`.
+This script injects the target layout JSON for all RadioMaster ER models (ER4, ER5A/C, ER5Cv2, ER6, ER6G, ER6GV, ER8, ER8G, ER8GV) and generates:
+- **`..._RCSIM_GPS_IMU.bin` / `.gz`**: Hybrid GPS + IMU for RCSIM simulator telemetry
+- **`..._GPS.bin` / `.gz`**: Standalone GPS NMEA auto-baudrate (PR #3798)
+- **`..._IMU.bin` / `.gz`**: Standalone I2C MPU6050/9250 AHRS telemetry

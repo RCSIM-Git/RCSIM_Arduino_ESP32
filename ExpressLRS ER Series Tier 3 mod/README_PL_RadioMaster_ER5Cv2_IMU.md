@@ -56,14 +56,14 @@ Odbiornik **RadioMaster ER5C V2** posiada 5 kanałów serw PWM. Używamy **Kana�
 ### Metoda A: Aktualizacja bezprzewodowa przez Wi-Fi WebUI (Rekomendowana)
 1. Połącz się z WebUI odbiornika (`http://10.0.0.1` lub `http://elrs_rx.local`).
 2. Przejdź do zakładki **Update** (`http://10.0.0.1/#update`).
-3. Wybierz plik: `ELRS_V4.1_RadioMaster_ER5Cv2_MPU9250.bin.gz`.
+3. Wybierz plik: `ELRS_V4.1_RadioMaster_ER5Cv2_IMU.bin.gz`.
 4. Kliknij **Update** i odczekaj na zakończenie procesu.
 
 ### Metoda B: Przez kabel FTDI USB-UART
 1. Zewrzyj przycisk **BOOT** na spodzie odbiornika ER5C V2 i podłącz adapter FTDI do USB komputera.
 2. Uruchom narzędzie `esptool.py` (zamieniając `COMX` na właściwy port COM):
 ```powershell
-esptool.py --port COMX --baud 115200 --chip esp8266 write_flash -fm dout 0x00000 ELRS_V4.1_RadioMaster_ER5Cv2_MPU9250.bin
+esptool.py --port COMX --baud 115200 --chip esp8266 write_flash -fm dout 0x00000 ELRS_V4.1_RadioMaster_ER5Cv2_IMU.bin
 ```
 
 ---
