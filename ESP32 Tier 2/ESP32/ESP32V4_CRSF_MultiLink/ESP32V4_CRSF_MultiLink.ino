@@ -393,6 +393,13 @@ void loop() {
   pcaManager.checkAndRecoverI2C();
   sensors.updateGPS();
 
+  // Ciągły puls diagnostyczny (Heartbeat) co 1 sekundę - potwierdzenie działania pętli serw
+  static unsigned long lastHeartbeat = 0;
+  if (millis() - lastHeartbeat >= 1000) {
+    lastHeartbeat = millis();
+    Serial.printf("[RCSIM Core 1] Żyje | Uptime: %lu s | Wolny RAM: %u B\n", millis() / 1000, ESP.getFreeHeap());
+  }
+
   RCChannelsMsg currentRC;
   if (xQueuePeek(rcQueue, &currentRC, 0) == pdTRUE) {
     if (currentRC.failsafe || !currentRC.isArmed) {
