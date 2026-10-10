@@ -323,19 +323,9 @@ void setup() {
     .idle_core_mask = 0,
     .trigger_panic = true,
   };
-  esp_err_t wdt_err = esp_task_wdt_reconfigure(&twdt_config);
-  if (wdt_err != ESP_OK) {
-    esp_task_wdt_init(&twdt_config);
-  }
-  if (esp_task_wdt_status(NULL) == ESP_ERR_NOT_FOUND) {
-    esp_task_wdt_add(NULL);
-  }
-  #else
-  esp_task_wdt_init(WDT_TIMEOUT_SECONDS, true);
-  if (esp_task_wdt_status(NULL) == ESP_ERR_NOT_FOUND) {
-    esp_task_wdt_add(NULL);
-  }
+  esp_task_wdt_reconfigure(&twdt_config);
   #endif
+  enableLoopWDT(); // Natywny mechanizm Arduino ESP32 subskrybujący pętlę loopTask
 
   // 2. Kolejka FreeRTOS
   rcQueue = xQueueCreate(1, sizeof(RCChannelsMsg));
@@ -387,9 +377,6 @@ void setup() {
 // CORE 1: PĘTLA GŁÓWNA - GENEROWANIE PWM I FAIL-SAFE (LOOP)
 // =================================================================================
 void loop() {
-  if (esp_task_wdt_status(NULL) == ESP_OK) {
-    esp_task_wdt_reset();
-  }
   pcaManager.checkAndRecoverI2C();
   sensors.updateGPS();
 
