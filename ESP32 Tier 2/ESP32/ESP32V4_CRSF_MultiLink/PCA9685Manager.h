@@ -36,24 +36,76 @@ public:
 
   bool begin(bool enableAutoCalib = false) {
     Wire.begin(_sdaPin, _sclPin);
-    Wire.setClock(400000); // Fast Mode 400 kHz
-    Wire.setTimeout(10);   // 10 ms limit oczekiwania chroniący przed zawieszeniem
+    Wire.setClock(100000); // Start od 100 kHz dla pewnej detekcji przez okablowanie Grove
+    Wire.setTimeout(25);
 
-    // Sprawdzenie i aktywacja huba Grove TCA9548A (jeśli obecny na szynie pod 0x70)
-    Wire.beginTransmission(0x70);
-    if (Wire.endTransmission() == 0) {
-      Wire.beginTransmission(0x70);
-      Wire.write(0xFF); // Włączenie wszystkich 8 portów Grove równolegle
-      Wire.endTransmission();
+    bool found = false;
+    uint8_t foundAddr = PCA9685_I2C_ADDR;
+
+    // Krok 1: Próba detekcji bezpośrednio na szynie (adresy 0x40 - 0x47)
+    for (uint8_t a = 0x40; a <= 0x47; a++) {
+      Wire.beginTransmission(a);
+      if (Wire.endTransmission() == 0) {
+        found = true;
+        foundAddr = a;
+        Serial.printf("[PCA9685] Wykryto bezpośrednio na szynie pod adresem 0x%02X!\n", foundAddr);
+        break;
+      }
     }
 
-    // Szybki skan szyny I2C pod adresem 0x40
-    Wire.beginTransmission(PCA9685_I2C_ADDR);
-    if (Wire.endTransmission() != 0) {
-      Serial.println("[PCA9685] BŁĄD: Nie wykryto układu PCA9685 pod adresem 0x40!");
+    // Krok 2: Jeśli nie wykryto bezpośrednio, sprawdź przez hub Grove TCA9548A (0x70)
+    if (!found) {
+      Wire.beginTransmission(0x70);
+      if (Wire.endTransmission() == 0) {
+        Serial.println("[PCA9685] Skanowanie poszczególnych portów huba Grove TCA9548A (0-7)...");
+        for (uint8_t ch = 0; ch < 8; ch++) {
+          Wire.beginTransmission(0x70);
+          Wire.write(1 << ch); // Włączenie wyłącznie kanału ch
+          Wire.endTransmission();
+          delay(2);
+
+          for (uint8_t a = 0x40; a <= 0x47; a++) {
+            Wire.beginTransmission(a);
+            if (Wire.endTransmission() == 0) {
+              found = true;
+              foundAddr = a;
+              Serial.printf("[PCA9685] SUKCES! Znaleziono pod adresem 0x%02X na porcie Grove TCA9548A nr %d!\n", foundAddr, ch);
+              break;
+            }
+          }
+          if (found) break;
+        }
+
+        // Jeśli nie znaleziono na pojedynczych portach, włącz wszystkie (0xFF)
+        if (!found) {
+          Wire.beginTransmission(0x70);
+          Wire.write(0xFF);
+          Wire.endTransmission();
+          delay(2);
+          for (uint8_t a = 0x40; a <= 0x47; a++) {
+            Wire.beginTransmission(a);
+            if (Wire.endTransmission() == 0) {
+              found = true;
+              foundAddr = a;
+              Serial.printf("[PCA9685] Wykryto pod adresem 0x%02X w trybie broadcast TCA (0xFF).\n", foundAddr);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (!found) {
+      Serial.println("[PCA9685] BŁĄD: Nie wykryto układu PCA9685 pod adresem 0x40-0x47!");
+      Serial.println("[PCA9685] Wskazówki sprzętowe: 1. Sprawdź zasilanie logiczne VCC modułu PCA9685 (3.3V/5V),");
+      Serial.println("                         2. Upewnij się, że kabel Grove jest wpięty do huba TCA9548A,");
+      Serial.println("                         3. Sprawdź czy dioda zasilania na płytce PCA9685 świeci.");
       return false;
     }
 
+    Wire.setClock(400000); // Przyspieszenie do 400 kHz Fast Mode dla szybkiego PWM
+
+    _pca = Adafruit_PWMServoDriver(foundAddr, Wire);
     _pca.begin();
     _pca.setOscillatorFrequency(OSCILLATOR_FREQ);
     _pca.setPWMFreq(SERVO_FREQ_HZ);
@@ -64,7 +116,7 @@ public:
 
     triggerFailsafe();
     _initialized = true;
-    Serial.println("[PCA9685] Zainicjalizowany pomyślnie na szynie I2C Fast Mode (400kHz).");
+    Serial.printf("[PCA9685] Zainicjalizowany pomyślnie (Adres: 0x%02X, Fast Mode 400kHz).\n", foundAddr);
     return true;
   }
 
