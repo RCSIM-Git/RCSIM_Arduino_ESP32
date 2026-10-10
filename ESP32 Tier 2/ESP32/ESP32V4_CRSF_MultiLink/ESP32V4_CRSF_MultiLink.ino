@@ -29,10 +29,10 @@
 // 1. WYBÓR TRYBU PRACY SYSTEMU
 // =================================================================================
 #define MODE_DUAL_LINK_HYBRID      0  // [ZALECANY DLA 5G + RF] Jednoczesny Muxer: ER5c UART + 5G/VPN
-#define MODE_SINGLE_ESP_NOW        1  // Pojedynczy link ESP-NOW (Ultra Low-Latency 1-2ms, tor)
-#define MODE_SINGLE_SERIAL         2  // Pojedynczy link USB Serial / LoRa UART
-#define MODE_SINGLE_UDP            3  // Pojedynczy link Wi-Fi UDP
-#define MODE_SINGLE_MICROLINK_VPN  4  // Pojedynczy link Tailscale VPN
+//#define MODE_SINGLE_ESP_NOW        1  // Pojedynczy link ESP-NOW (Ultra Low-Latency 1-2ms, tor)
+//#define MODE_SINGLE_SERIAL         2  // Pojedynczy link USB Serial / LoRa UART
+//#define MODE_SINGLE_UDP            3  // Pojedynczy link Wi-Fi UDP
+//#define MODE_SINGLE_MICROLINK_VPN  4  // Pojedynczy link Tailscale VPN
 
 #define ACTIVE_SYSTEM_MODE         MODE_DUAL_LINK_HYBRID
 
@@ -58,8 +58,12 @@
 #define CRSF_RF_BAUDRATE     420000
 
 // Dzielnik napięcia baterii (ADC1 - bezpieczny z Wi-Fi i wolny od szyny Octal Flash/PSRAM)
-#define VBAT_ADC_PIN         1      // ESP32-S3 GPIO 1 (ADC1_CH0)
+#ifndef VBAT_ADC_PIN
+#define VBAT_ADC_PIN         1      // ESP32-S3 GPIO 1 (ADC1_CH0), wpisz -1 aby wyłączyć pomiar
+#endif
+#ifndef VBAT_DIVIDER_RATIO
 #define VBAT_DIVIDER_RATIO   5.545f // Dzielnik np. R1=10k, R2=2.2k (dla pakietu 4S LiPo w Mojave)
+#endif
 
 // Watchdog i Fail-Safe
 #define WDT_TIMEOUT_SECONDS  2
@@ -83,7 +87,7 @@ const uint16_t UDP_LISTEN_PORT   = 12345; // Port nasłuchu na ESP32
 const uint16_t GCS_TELEMETRY_PORT = 12347; // Port telemetryczny stacji PC
 
 // Konfiguracja stacji GCS (PC)
-IPAddress gcsTargetIP(192, 168, 43, 100);  // Domyślny IP stacji PC lub IP Tailscale (np. 100.64.0.1)
+IPAddress gcsTargetIP(100, 113, 89, 5);  // Adres IP stacji PC w sieci Tailscale (zapisany z przecinkami!)
 const char* TAILSCALE_AUTH_KEY = "tskey-auth-YOUR_KEY_HERE";
 
 // =================================================================================
@@ -279,7 +283,16 @@ void setup() {
   Serial.println("===========================================================");
 
   // 1. Inicjalizacja sprzętowego Task Watchdog Timer (2s)
+  #if defined(ESP_ARDUINO_VERSION) && (ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0))
+  esp_task_wdt_config_t twdt_config = {
+    .timeout_ms = WDT_TIMEOUT_SECONDS * 1000,
+    .idle_core_mask = 0,
+    .trigger_panic = true,
+  };
+  esp_task_wdt_init(&twdt_config);
+  #else
   esp_task_wdt_init(WDT_TIMEOUT_SECONDS, true);
+  #endif
   esp_task_wdt_add(NULL);
 
   // 2. Kolejka FreeRTOS

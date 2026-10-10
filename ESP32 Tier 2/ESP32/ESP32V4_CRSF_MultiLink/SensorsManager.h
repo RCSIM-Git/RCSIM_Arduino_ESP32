@@ -31,7 +31,7 @@ class SensorsManager {
 private:
   HardwareSerial &_gpsSerial;
   TinyGPSPlus _gps;
-  uint8_t _vbatPin;
+  int8_t _vbatPin;
   float _dividerRatio;
   float _filteredVbat;
 
@@ -50,7 +50,7 @@ private:
   bool _tcaDetected;
 
 public:
-  SensorsManager(HardwareSerial &gpsSerial, uint8_t vbatPin = 1, float dividerRatio = 5.545f)
+  SensorsManager(HardwareSerial &gpsSerial, int8_t vbatPin = -1, float dividerRatio = 5.545f)
     : _gpsSerial(gpsSerial), _vbatPin(vbatPin), _dividerRatio(dividerRatio),
       _filteredVbat(0.0f),
       #if (ACTIVE_IMU == IMU_MPU6050)
@@ -82,9 +82,13 @@ public:
     }
 
     // 2. Inicjalizacja ADC1 dla baterii (bezpieczne piny GPIO 1-10 na ESP32-S3)
-    analogReadResolution(12);
-    pinMode(_vbatPin, INPUT);
-    _filteredVbat = readRawBatteryVoltage();
+    if (_vbatPin >= 0) {
+      analogReadResolution(12);
+      pinMode(_vbatPin, INPUT);
+      _filteredVbat = readRawBatteryVoltage();
+    } else {
+      _filteredVbat = 16.0f; // Domyślne nominalne napięcie pakietu 4S LiPo przy braku czujnika
+    }
 
     // 3. Inicjalizacja GPS UART (Grove Air530)
     if (gpsRxPin >= 0) {
@@ -285,6 +289,7 @@ public:
 
   // Odczyt napięcia akumulatora z filtrem EMA
   float readRawBatteryVoltage() {
+    if (_vbatPin < 0) return 16.0f;
     int raw = analogRead(_vbatPin);
     float pinVolts = (raw / 4095.0f) * 3.3f;
     return pinVolts * _dividerRatio;

@@ -44,11 +44,19 @@ private:
 
   static ESPNowTransport *_instance;
 
+  #if defined(ESP_ARDUINO_VERSION) && (ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0))
+  static void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, int len) {
+    if (_instance && info) {
+      _instance->handleIncoming(info->src_addr, incomingData, len);
+    }
+  }
+  #else
   static void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
     if (_instance) {
       _instance->handleIncoming(mac, incomingData, len);
     }
   }
+  #endif
 
   void handleIncoming(const uint8_t *mac, const uint8_t *incomingData, int len) {
     _lastPacketTime = millis();
