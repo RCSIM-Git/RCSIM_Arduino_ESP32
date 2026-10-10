@@ -25,17 +25,19 @@ private:
   uint8_t _sclPin;
   uint8_t _calibPcaChannel;
   int8_t  _calibFeedbackPin;
-  bool    _initialized;
+  bool          _initialized;
+  unsigned long _lastRecoverAttempt;
 
 public:
   PCA9685Manager(uint8_t sdaPin = 13, uint8_t sclPin = 14, uint8_t calibCh = 15, int8_t calibPin = 12)
     : _pca(PCA9685_I2C_ADDR), _sdaPin(sdaPin), _sclPin(sclPin),
-      _calibPcaChannel(calibCh), _calibFeedbackPin(calibPin), _initialized(false) {}
+      _calibPcaChannel(calibCh), _calibFeedbackPin(calibPin),
+      _initialized(false), _lastRecoverAttempt(0) {}
 
   bool begin(bool enableAutoCalib = false) {
     Wire.begin(_sdaPin, _sclPin);
     Wire.setClock(400000); // Fast Mode 400 kHz
-    Wire.setTimeOut(10);   // 10 ms limit oczekiwania chroniący przed zawieszeniem
+    Wire.setTimeout(10);   // 10 ms limit oczekiwania chroniący przed zawieszeniem
 
     // Sprawdzenie i aktywacja huba Grove TCA9548A (jeśli obecny na szynie pod 0x70)
     Wire.beginTransmission(0x70);
@@ -68,6 +70,7 @@ public:
 
   // Wymuszenie stanu bezpiecznego (Neutral 1500us na sterach, 1500us na gazie)
   void triggerFailsafe() {
+    if (!_initialized) return;
     for (uint8_t ch = 0; ch < PCA_NUM_CHANNELS; ch++) {
       setChannelUs(ch, 1500);
     }
@@ -75,6 +78,7 @@ public:
 
   // Ustawienie szerokości impulsu w mikrosekundach (us) dla danego kanału
   void setChannelUs(uint8_t channel, uint16_t pulseUs) {
+    if (!_initialized) return;
     if (channel >= PCA_NUM_CHANNELS) return;
     if (pulseUs < 800) pulseUs = 800;
     if (pulseUs > 2200) pulseUs = 2200;
@@ -87,8 +91,12 @@ public:
 
   // Odzyskiwanie magistrali I2C (Bus Recovery) w przypadku blokady linii SDA przez zakłócenia EMI
   void checkAndRecoverI2C() {
+    if (!_initialized) return; // Jeśli PCA9685 nie został wykryty przy starcie, nie zapętlaj resetów szyny!
+    if (millis() - _lastRecoverAttempt < 2000) return; // Próba co najwyżej raz na 2 sekundy
+
     Wire.beginTransmission(PCA9685_I2C_ADDR);
     if (Wire.endTransmission() != 0) {
+      _lastRecoverAttempt = millis();
       Serial.println("[I2C] Wykryto kolizję lub blokadę szyny! Resetowanie linii...");
       Wire.end();
       pinMode(_sdaPin, INPUT_PULLUP);
@@ -104,7 +112,7 @@ public:
 
       Wire.begin(_sdaPin, _sclPin);
       Wire.setClock(400000);
-      Wire.setTimeOut(10);
+      Wire.setTimeout(10);
 
       // Ponowna aktywacja TCA9548A jeśli występuje na szynie
       Wire.beginTransmission(0x70);

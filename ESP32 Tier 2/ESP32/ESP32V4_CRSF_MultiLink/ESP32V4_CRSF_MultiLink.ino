@@ -177,10 +177,26 @@ void commTask(void *pvParameters) {
       uint8_t lenBat = CRSFParser::packBattery(outTelemetryBuf, bat);
       dualMuxer.sendTelemetry(outTelemetryBuf, lenBat);
 
+      // Monitorowanie stanu połączenia Wi-Fi
+      static bool wifiConnectedBefore = false;
+      if (WiFi.status() == WL_CONNECTED) {
+        if (!wifiConnectedBefore) {
+          wifiConnectedBefore = true;
+          Serial.printf("[Wi-Fi] POŁĄCZONO Z SIECIĄ! IP ESP32: %s | RSSI: %d dBm\n",
+                        WiFi.localIP().toString().c_str(), WiFi.RSSI());
+        }
+      } else {
+        if (wifiConnectedBefore) {
+          wifiConnectedBefore = false;
+          Serial.println("[Wi-Fi] Utracono połączenie z siecią. Trwa próba ponownego łączenia...");
+        }
+      }
+
       // 2. Link Statistics (0x14)
       CRSF_LinkStats_Data stats;
       memset(&stats, 0, sizeof(stats));
-      stats.uplink_rssi_1 = (activeSrc == LINK_SOURCE_RF) ? 55 : (uint8_t)abs(WiFi.RSSI());
+      int8_t curRssi = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : -99;
+      stats.uplink_rssi_1 = (activeSrc == LINK_SOURCE_RF) ? 55 : (uint8_t)abs(curRssi);
       stats.uplink_link_quality = (activeSrc != LINK_SOURCE_NONE) ? 100 : 0;
       stats.active_antenna = (uint8_t)activeSrc; // 1=RF, 2=5G
       uint8_t lenStats = CRSFParser::packLinkStats(outTelemetryBuf, stats);
@@ -277,7 +293,10 @@ void commTask(void *pvParameters) {
 // =================================================================================
 void setup() {
   Serial.begin(115200);
-  delay(200);
+  unsigned long startWait = millis();
+  while (!Serial && (millis() - startWait < 1500)) {
+    delay(10); // Czas na nawiązanie połączenia USB CDC z komputerem
+  }
   Serial.println("\n\n===========================================================");
   Serial.println("   RCSIM - ESP32 Tier 2 Pro (CRSF Multi-Link Hub & Dual-Mux)   ");
   Serial.println("===========================================================");
@@ -289,11 +308,14 @@ void setup() {
     .idle_core_mask = 0,
     .trigger_panic = true,
   };
-  esp_task_wdt_init(&twdt_config);
+  esp_err_t wdt_err = esp_task_wdt_reconfigure(&twdt_config);
+  if (wdt_err != ESP_OK) {
+    esp_task_wdt_init(&twdt_config);
+  }
   #else
   esp_task_wdt_init(WDT_TIMEOUT_SECONDS, true);
-  #endif
   esp_task_wdt_add(NULL);
+  #endif
 
   // 2. Kolejka FreeRTOS
   rcQueue = xQueueCreate(1, sizeof(RCChannelsMsg));
@@ -330,7 +352,7 @@ void setup() {
   xTaskCreatePinnedToCore(
     commTask,
     "CRSF_CommTask",
-    4096,
+    8192, // 8 KB bezpiecznego stosu dla obsługi pakietów UDP i Wi-Fi
     NULL,
     2, // Wysoki priorytet
     &commTaskHandle,
