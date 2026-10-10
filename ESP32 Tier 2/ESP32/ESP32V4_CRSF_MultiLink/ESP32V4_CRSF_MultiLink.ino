@@ -179,23 +179,38 @@ void commTask(void *pvParameters) {
 
       // Monitorowanie stanu połączenia Wi-Fi
       static bool wifiConnectedBefore = false;
-      if (WiFi.status() == WL_CONNECTED) {
+      static unsigned long lastWifiStatusCheck = 0;
+      wl_status_t wStatus = WiFi.status();
+      if (wStatus == WL_CONNECTED) {
         if (!wifiConnectedBefore) {
           wifiConnectedBefore = true;
-          Serial.printf("[Wi-Fi] POŁĄCZONO Z SIECIĄ! IP ESP32: %s | RSSI: %d dBm\n",
+          Serial.printf("\n[Wi-Fi] =========================================\n");
+          Serial.printf("[Wi-Fi] POŁĄCZONO Z SIECIĄ '%s'!\n", WIFI_SSID);
+          Serial.printf("[Wi-Fi] IP ESP32: %s | RSSI: %d dBm\n",
                         WiFi.localIP().toString().c_str(), WiFi.RSSI());
+          Serial.printf("[Wi-Fi] =========================================\n\n");
         }
       } else {
         if (wifiConnectedBefore) {
           wifiConnectedBefore = false;
           Serial.println("[Wi-Fi] Utracono połączenie z siecią. Trwa próba ponownego łączenia...");
         }
+        if (millis() - lastWifiStatusCheck >= 5000) {
+          lastWifiStatusCheck = millis();
+          if (wStatus == WL_NO_SSID_AVAIL) {
+            Serial.printf("[Wi-Fi] BŁĄD: Nie znaleziono hotspotu '%s'! Sprawdź czy hotspot w telefonie jest WŁĄCZONY i czy pasmo to 2.4 GHz (ESP32 nie widzi 5 GHz).\n", WIFI_SSID);
+          } else if (wStatus == WL_CONNECT_FAILED) {
+            Serial.printf("[Wi-Fi] BŁĄD: Odrzucono połączenie z '%s'. Sprawdź poprawność hasła.\n", WIFI_SSID);
+          } else if (wStatus == WL_DISCONNECTED) {
+            Serial.printf("[Wi-Fi] Łączenie z hotspotem '%s'... (status: DISCONNECTED / negocjacja asocjacji)\n", WIFI_SSID);
+          }
+        }
       }
 
       // 2. Link Statistics (0x14)
       CRSF_LinkStats_Data stats;
       memset(&stats, 0, sizeof(stats));
-      int8_t curRssi = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : -99;
+      int8_t curRssi = (wStatus == WL_CONNECTED) ? WiFi.RSSI() : -99;
       stats.uplink_rssi_1 = (activeSrc == LINK_SOURCE_RF) ? 55 : (uint8_t)abs(curRssi);
       stats.uplink_link_quality = (activeSrc != LINK_SOURCE_NONE) ? 100 : 0;
       stats.active_antenna = (uint8_t)activeSrc; // 1=RF, 2=5G
@@ -338,6 +353,7 @@ void setup() {
   Serial.printf("[Wi-Fi] Rozpoczynanie łączenia z hotspotem '%s'...\n", WIFI_SSID);
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
+  WiFi.setSleep(false);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   // Nie blokujemy pętli setup() - radio RF ruszy od razu, a Wi-Fi połączy się w tle!
 #endif
