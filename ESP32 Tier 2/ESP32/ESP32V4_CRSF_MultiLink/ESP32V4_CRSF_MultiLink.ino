@@ -312,9 +312,14 @@ void setup() {
   if (wdt_err != ESP_OK) {
     esp_task_wdt_init(&twdt_config);
   }
+  if (esp_task_wdt_status(NULL) == ESP_ERR_NOT_FOUND) {
+    esp_task_wdt_add(NULL);
+  }
   #else
   esp_task_wdt_init(WDT_TIMEOUT_SECONDS, true);
-  esp_task_wdt_add(NULL);
+  if (esp_task_wdt_status(NULL) == ESP_ERR_NOT_FOUND) {
+    esp_task_wdt_add(NULL);
+  }
   #endif
 
   // 2. Kolejka FreeRTOS
@@ -366,7 +371,9 @@ void setup() {
 // CORE 1: PĘTLA GŁÓWNA - GENEROWANIE PWM I FAIL-SAFE (LOOP)
 // =================================================================================
 void loop() {
-  esp_task_wdt_reset();
+  if (esp_task_wdt_status(NULL) == ESP_OK) {
+    esp_task_wdt_reset();
+  }
   pcaManager.checkAndRecoverI2C();
   sensors.updateGPS();
 
