@@ -41,6 +41,33 @@
 #define FAILSAFE_TIMEOUT    500 // Czas w [ms], po którym utrata sygnału aktywuje światła awaryjne
 #define BLINK_INTERVAL_MS   350 // Częstotliwość migania kierunkowskazów w [ms]
 
+// Przygaszone światła: 1 z 10 faz PWM (10%).
+volatile bool brake_dimmed = false;
+volatile bool headlight_dimmed = false;
+volatile bool left_turn_dimmed = false;
+volatile bool right_turn_dimmed = false;
+ISR(TIMER2_COMPA_vect) {
+  static uint8_t phase = 0;
+  if (++phase >= 10) phase = 0;
+  if (brake_dimmed) {
+    // PORTD pozostaje LOW: przełączamy tylko między masą i Hi-Z.
+    if (phase == 0) DDRD |= _BV(DDD3);
+    else DDRD &= ~_BV(DDD3);
+  }
+  if (headlight_dimmed) {
+    if (phase == 0) DDRD |= _BV(DDD2);
+    else DDRD &= ~_BV(DDD2);
+  }
+  if (left_turn_dimmed) {
+    if (phase == 0) DDRD |= _BV(DDD5);
+    else DDRD &= ~_BV(DDD5);
+  }
+  if (right_turn_dimmed) {
+    if (phase == 0) DDRD |= _BV(DDD6);
+    else DDRD &= ~_BV(DDD6);
+  }
+}
+
 // Progi detekcji PWM [µs]
 #define PWM_MIN             1000
 #define PWM_NEUTRAL         1500
@@ -175,6 +202,13 @@ void setup() {
   
   // Włączenie przerwaniowych rejestrów AVR dla PORTB
   cli();                  // Zablokuj przerwania na czas konfiguracji
+  // Timer2: 4 kHz przerwań daje PWM 400 Hz bez zakłócania millis()/delay().
+  TCCR2A = _BV(WGM21);
+  TCCR2B = _BV(CS21) | _BV(CS20); // Preskaler 32
+  TCNT2 = 0;
+  OCR2A = F_CPU / 32 / 4000 - 1;
+  TIFR2 = _BV(OCF2A);
+  TIMSK2 = _BV(OCIE2A);
   PCICR |= _BV(PCIE0);    // Włącz Pin Change Interrupt 0 (obsługuje D8-D13)
   PCMSK0 |= _BV(PCINT0);  // Włącz obsługę przerwania dla pinu PB0 (D8)
   PCMSK0 |= _BV(PCINT1);  // Włącz obsługę przerwania dla pinu PB1 (D9)
@@ -240,10 +274,14 @@ void loop() {
   
   // Zmienne wyjściowe dla oświetlenia
   bool headlight_out = false;
+  bool headlight_dim_out = false;
   bool brake_out = false;
+  bool brake_dim_out = false;
   bool reverse_out = false;
   bool left_turn_out = false;
   bool right_turn_out = false;
+  bool left_turn_dim_out = false;
+  bool right_turn_dim_out = false;
   bool aux_out = false;
   
   // =================================================================================
@@ -338,13 +376,18 @@ void loop() {
         brake_out = true;       // Pełny STOP przy hamowaniu
         reverse_out = true;     // Światła cofania włączone w strefie wstecznej
       } else if (is_neutral) {
-        // Pozycja neutralna: Lekki STOP (pozycyjne). Jeśli Twoje LEDy tylne są połączone z PWM,
-        // możemy kontrolować jasność (tutaj upraszczamy do 100% stop, lub włączonego na stałe)
+        // Pozycyjne z przodu i obrysowe na postoju, gdy światła są włączone.
+        headlight_dim_out = headlight_out;
+        left_turn_dim_out = headlight_out;
+        right_turn_dim_out = headlight_out;
+        aux_out = aux_out || headlight_out;
+        // Pozycja neutralna: pełna jasność świateł tylnych.
         brake_out = true;
         reverse_out = false;
       } else {
-        // Jazda do przodu: Brak świateł STOP, brak cofania
-        brake_out = false;
+        // Jazda do przodu: przygaszone światła tylne, brak cofania.
+        brake_out = true;
+        brake_dim_out = true;
         reverse_out = false;
       }
     } else {
@@ -364,6 +407,7 @@ void loop() {
           turn_left_start_time = now_ms;
         }
         if (now_ms - turn_left_start_time > turn_signal_delay_threshold) {
+          left_turn_dim_out = false; // Miganie 100% / wyłączone ma pierwszeństwo.
           left_turn_out = blink_state;
         }
         turn_right_start_time = 0; // Reset drugiego kierunku
@@ -372,6 +416,7 @@ void loop() {
           turn_right_start_time = now_ms;
         }
         if (now_ms - turn_right_start_time > turn_signal_delay_threshold) {
+          right_turn_dim_out = false;
           right_turn_out = blink_state;
         }
         turn_left_start_time = 0; // Reset drugiego kierunku
@@ -399,11 +444,17 @@ void loop() {
   // =================================================================================
   // --- ZAPIS STANÓW NA FIZYCZNE PINY ---
   // =================================================================================
-  writeLight(PIN_HEADLIGHT, headlight_out);
-  writeLight(PIN_BRAKE, brake_out);
+  noInterrupts();
+  headlight_dimmed = headlight_dim_out;
+  if (!headlight_dim_out) writeLight(PIN_HEADLIGHT, headlight_out);
+  brake_dimmed = brake_dim_out;
+  if (!brake_dim_out) writeLight(PIN_BRAKE, brake_out);
+  left_turn_dimmed = left_turn_dim_out;
+  if (!left_turn_dim_out) writeLight(PIN_LEFT_TURN, left_turn_out);
+  right_turn_dimmed = right_turn_dim_out;
+  if (!right_turn_dim_out) writeLight(PIN_RIGHT_TURN, right_turn_out);
+  interrupts();
   writeLight(PIN_REVERSE, reverse_out);
-  writeLight(PIN_LEFT_TURN, left_turn_out);
-  writeLight(PIN_RIGHT_TURN, right_turn_out);
   writeLight(PIN_AUX, aux_out);
   
   // Bardzo małe opóźnienie pętli głównej dla stabilności
