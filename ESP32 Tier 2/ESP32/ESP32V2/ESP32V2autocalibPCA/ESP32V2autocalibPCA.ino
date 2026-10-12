@@ -16,7 +16,7 @@
 // --- WYBÓR PROFILU SPRZĘTOWEGO ---
 //#define BOARD_AI_THINKER  
 #define BOARD_WROVER_DEV  
-//#define LILYGO_TSIMCAM_S3    
+//#define BOARD_LILYGO_TSIMCAM_S3
 
 // --- DEFINICJE PINÓW DLA PROFILI ---
 #ifdef BOARD_AI_THINKER
@@ -125,6 +125,31 @@ Adafruit_PWMServoDriver pca = Adafruit_PWMServoDriver();
 
 #if ENABLE_IMU
 MPU6050 mpu(Wire);
+bool imuReady = false;
+uint32_t imuSequence = 0;
+char imuDeviceUid[32] = {};
+
+// Only complete hardware reads become samples; a disconnected IMU emits nothing.
+bool readIMUSample(float *values) {
+  const uint8_t address = mpu.getAddress();
+  Wire.beginTransmission(address);
+  Wire.write(0x3B);
+  if (Wire.endTransmission(false) != 0) return false;
+  if (Wire.requestFrom(address, (uint8_t)14) != 14) return false;
+  int16_t raw[7];
+  for (uint8_t i = 0; i < 7; ++i) {
+    uint8_t high = Wire.read();
+    uint8_t low = Wire.read();
+    raw[i] = (int16_t)(((uint16_t)high << 8) | low);
+  }
+  values[0] = raw[0] / 16384.0f - mpu.getAccXoffset();
+  values[1] = raw[1] / 16384.0f - mpu.getAccYoffset();
+  values[2] = raw[2] / 16384.0f - mpu.getAccZoffset();
+  values[3] = raw[4] / 131.0f - mpu.getGyroXoffset();
+  values[4] = raw[5] / 131.0f - mpu.getGyroYoffset();
+  values[5] = raw[6] / 131.0f - mpu.getGyroZoffset();
+  return true;
+}
 #endif
 
 #if ENABLE_CAMERA
@@ -278,9 +303,12 @@ void setup() {
 
   // 4. IMU
   #if ENABLE_IMU
-  if (mpu.begin() == 0) {
+  if (mpu.begin(0, 0) == 0) { // Explicit +/-250 deg/s, +/-2 g.
+    snprintf(imuDeviceUid, sizeof(imuDeviceUid), "esp32:%012llx",
+             (unsigned long long)ESP.getEfuseMac());
     Serial.println("IMU Gotowy/Ready.");
     mpu.calcOffsets();
+    imuReady = true;
   } else {
     Serial.println("Błąd telemetrii/ERROR IMU!");
   }
@@ -387,15 +415,20 @@ void loop() {
   // 4. Telemetria IMU
   #if ENABLE_IMU
   static unsigned long lastTelem = 0;
-  if (millis() - lastTelem > 50) { 
+  if (imuReady && millis() - lastTelem >= 25) {
     lastTelem = millis();
-    mpu.update();
-    char j[128];
-    snprintf(j, sizeof(j), "{\"imu\":{\"ax\":%.2f,\"ay\":%.2f,\"az\":%.2f,\"gx\":%.2f,\"gy\":%.2f,\"gz\":%.2f}}",
-             mpu.getAccX(), mpu.getAccY(), mpu.getAccZ(), mpu.getGyroX(), mpu.getGyroY(), mpu.getGyroZ());
+    float sample[6];
+    if (!readIMUSample(sample)) return;
+    const uint32_t sampleTime = micros();
+    char j[448];
+    int length = snprintf(j, sizeof(j), "{\"imu\":{\"source\":\"esp32_raw\",\"device_uid\":\"%s\",\"sensor_id\":\"mpu6050:0x%02x\",\"accel_unit\":\"g\",\"gyro_unit\":\"deg/s\",\"sample_time_us\":%lu,\"sample_sequence\":%lu,\"ax\":%.5f,\"ay\":%.5f,\"az\":%.5f,\"gx\":%.3f,\"gy\":%.3f,\"gz\":%.3f}}",
+             imuDeviceUid, (unsigned int)mpu.getAddress(),
+             (unsigned long)sampleTime, (unsigned long)++imuSequence,
+             sample[0], sample[1], sample[2], sample[3], sample[4], sample[5]);
+    if (length <= 0 || length >= (int)sizeof(j)) return;
     if (pcIP) {
       udp.beginPacket(pcIP, PC_TELEMETRY_PORT);
-      udp.write((uint8_t*)j, strlen(j));
+      udp.write((uint8_t*)j, (size_t)length);
       udp.endPacket();
     }
   }
