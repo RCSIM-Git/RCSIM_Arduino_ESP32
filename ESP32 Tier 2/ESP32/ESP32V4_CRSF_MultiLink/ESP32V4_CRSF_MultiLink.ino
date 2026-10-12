@@ -87,7 +87,7 @@ const uint16_t UDP_LISTEN_PORT   = 12345; // Port nasłuchu na ESP32
 const uint16_t GCS_TELEMETRY_PORT = 12347; // Port telemetryczny stacji PC
 
 // Konfiguracja stacji GCS (PC)
-IPAddress gcsTargetIP(100, 113, 89, 5);  // Adres IP stacji PC w sieci Tailscale (zapisany z przecinkami!)
+IPAddress gcsTargetIP(100, 100, 100, 100);  // Adres IP stacji PC w sieci Tailscale (zapisany z przecinkami!)
 const char* TAILSCALE_AUTH_KEY = "tskey-auth-YOUR_KEY_HERE";
 
 // =================================================================================
