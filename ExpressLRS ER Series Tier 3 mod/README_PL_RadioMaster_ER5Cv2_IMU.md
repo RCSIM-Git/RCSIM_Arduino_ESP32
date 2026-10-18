@@ -1,22 +1,22 @@
-# 🚀 RadioMaster ER5C V2 ExpressLRS (2.4GHz) – Mod z telemetrią IMU (MPU9250 / MPU6050 / MPU6500)
+# 🚀 RadioMaster ER5C V2 ExpressLRS (2.4GHz) – Mod GPS + IMU (MPU9250 / MPU6050 / MPU6500)
 
 *Dostępne języki: [Polski](README_PL_RadioMaster_ER5Cv2_IMU.md) | [English](README_EN_RadioMaster_ER5Cv2_IMU.md)*
 
 ---
 
 Rozszerzona wersja oprogramowania **ExpressLRS v4.1.0** przeznaczona dla odbiornika **RadioMaster ER5C V2 (ESP8285)**.
-Oprogramowanie to dodaje pełną obsługę czujnika inercyjnego **IMU MPU9250 / MPU6050 / MPU6500 / MPU9255** przez magistralę I2C i przesyła dane telemetryczne **w czasie rzeczywistym (20Hz)** do aparatury (np. RadioMaster Nomad) i komputera PC (RCSIM GCS).
+Oprogramowanie to dodaje pełną obsługę czujnika inercyjnego **IMU MPU9250 / MPU6050 / MPU6500 / MPU9255** przez magistralę I2C i przesyła dane telemetryczne **w czasie rzeczywistym; pętla IMU pracuje co 10 ms (100 Hz), a rzeczywista częstotliwość odbioru zależy od pasma telemetrii** do aparatury (np. RadioMaster Nomad) i komputera PC (RCSIM GCS).
 
 ---
 
 
 ## 📌 Główne Funkcje Modułu IMU
 
-- **Surowe pomiary inercyjne:** Akcelerometr ($\pm 2g$), Żyroskop ($\pm 250dps$), Magnetometr ($\mu T$).
-- **Nowy typ ramki CRSF:** Ramka telemetrii `0x86` (`CRSF_FRAMETYPE_CUSTOM_IMU`), rozszerzająca standardowy protokół CRSF v3.
-- **Transmisja radiowa 20Hz:** Dane przesyłane bezpośrednio z odbiornika do nadajnika i komputera.
-- **Bezpieczny Heartbeat:** Jeśli czujnik jest rozłączony, odbiornik nadaje ramkę sprawdzającą z domyślnym wektorem grawitacji $1.0g$ ($9.81 m/s^2$).
-- **Dynamiczna konfiguracja I2C:** Wybór dowolnych pinów magistrali I2C (SDA / SCL) z poziomu interfejsu WebUI odbiornika.
+- **Wspólny firmware GPS + IMU:** GPS przez UART (NMEA / UBX) i IMU przez I2C działają jednocześnie.
+- **Zmierzone przyspieszenie i prędkość kątowa:** Zakresy sprzętowe MPU to ±2 g i ±250 deg/s; standardowa ramka CRSF `0x13` koduje ±16 g i ±2000 deg/s.
+- **Standardowe ramki CRSF:** `0x13` zawiera czas próbki, żyroskop, akcelerometr i temperaturę; `0x1E` osobno przesyła oszacowaną orientację. GPS używa `0x02`, a czas GPS `0x03`.
+- **Bez sztucznych surowych próbek:** Nieudany odczyt I2C nie generuje pomiaru `0x13`. Ta ramka nie zawiera magnetometru.
+- **Konfiguracja I2C:** Ustaw SDA/SCL w WebUI. Rzeczywistą częstotliwość próbek sprawdzaj w RCSIM, nie na podstawie częstotliwości pakietów łącza.
 
 ---
 
@@ -33,7 +33,17 @@ Odbiornik **RadioMaster ER5C V2** posiada 5 kanałów serw PWM. Używamy **Kana�
 | **SDA** | **`~` (Sygnałowy Kanał 4 / CH4)** | **I2C SDA** |
 | **SCL** | **`~` (Sygnałowy Kanał 5 / CH5)** | **I2C SCL** |
 
-> 💡 **Uwaga:** Zarówno adres **`0x68`** (AD0=GND), jak i **`0x69`** (AD0=VCC lub niepodłączony, np. na modułach SEN-MPU6050) są wykrywane i obsługiwane automatycznie w locie!
+> 💡 **Uwaga:** Zarówno adres **`0x68`** (AD0=GND), jak i **`0x69`** (AD0=HIGH, np. na modułach SEN-MPU6050) są wykrywane i obsługiwane automatycznie w locie!
+
+---
+
+## 🛰️ Podłączenie GPS razem z IMU
+
+- TX modułu GPS → **sygnał CH3 (GPIO3)**; ustaw Output 3 jako **Serial RX**, a główny **Serial Protocol** jako **GPS**.
+- Pozostaw **CH2 (GPIO1)** w trybie PWM, aby zachować wyjście ESC. Przy odbiorze jednokierunkowym RX GPS pozostaje niepodłączony; polecenia autokonfiguracji nie docierają do GPS, więc moduł musi już nadawać obsługiwane NMEA lub UBX.
+- CH1 pozostaje PWM kierownicy; CH4 (GPIO9) to SDA IMU, CH5 (GPIO10) to SCL IMU.
+- Zapewnij wspólną masę. Dobierz napięcie zasilania do specyfikacji modułu; napięcie szyny PWM nie musi być bezpieczne dla samego MPU. Podciąganie sygnałów I2C musi być do 3,3 V.
+- Zapisz ustawienia i zrestartuj odbiornik. Zweryfikuj osobno ramki GPS `0x02` i IMU `0x13`; fix GPS wymaga odbioru satelitów, ale nie jest potrzebny do pomiarów IMU.
 
 ---
 
@@ -56,78 +66,42 @@ Odbiornik **RadioMaster ER5C V2** posiada 5 kanałów serw PWM. Używamy **Kana�
 ### Metoda A: Aktualizacja bezprzewodowa przez Wi-Fi WebUI (Rekomendowana)
 1. Połącz się z WebUI odbiornika (`http://10.0.0.1` lub `http://elrs_rx.local`).
 2. Przejdź do zakładki **Update** (`http://10.0.0.1/#update`).
-3. Wybierz plik: `ELRS_V4.1_RadioMaster_ER5Cv2_IMU.bin.gz`.
+3. Wybierz plik: `ELRS_V4.1_RadioMaster_ER5Cv2_RCSIM_GPS_IMU.bin.gz`.
 4. Kliknij **Update** i odczekaj na zakończenie procesu.
 
 ### Metoda B: Przez kabel FTDI USB-UART
 1. Zewrzyj przycisk **BOOT** na spodzie odbiornika ER5C V2 i podłącz adapter FTDI do USB komputera.
 2. Uruchom narzędzie `esptool.py` (zamieniając `COMX` na właściwy port COM):
 ```powershell
-esptool.py --port COMX --baud 115200 --chip esp8266 write_flash -fm dout 0x00000 ELRS_V4.1_RadioMaster_ER5Cv2_IMU.bin
+esptool.py --port COMX --baud 115200 --chip esp8266 write_flash -fm dout 0x00000 ELRS_V4.1_RadioMaster_ER5Cv2_RCSIM_GPS_IMU.bin
 ```
 
 ---
 
-## 💻 Integracja w Pythonie / RCSIM (Dekoder CRSF 0x86)
+## 💻 RCSIM / CRSF 0x13
 
-W aplikacji odbiorczej po stronie komputera (np. w pliku `crsf_transceiver.py`), dodaj poniższą sekcję dekodowania ramki `0x86`:
+Aktualny RCSIM dekoduje `0x13`; nie dodawaj przestarzałego dekodera `0x86`. Sprawdź `Raw Crsf → 0x13`, payload 18 bajtów, `source: crsf_raw`, temperaturę i reagujący żyroskop. Sama ramka `0x1E` oznacza orientację, nie surowy pomiar IMU. Cały tor RX → TX → USB/serial musi przekazywać `0x13`.
+
+Przykład dekodowania payloadu (big-endian; znak gyro X przeliczony z lewostronnego CRSF na prawostronny RCSIM):
 
 ```python
 import struct
 
-# W pętli dekodowania telemetrii CRSF:
-elif frame_type == 0x86 and len(payload) >= 18:  # CRSF_FRAMETYPE_CUSTOM_IMU
-    ax, ay, az, gx, gy, gz, mx, my, mz = struct.unpack(">hhhhhhhhh", payload[0:18])
-    
-    # Przeliczenie surowych LSB na jednostki fizyczne:
-    ax_g, ay_g, az_g = ax / 16384.0, ay / 16384.0, az / 16384.0  # g (+-2g)
-    gx_d, gy_d, gz_d = gx / 131.0, gy / 131.0, gz / 131.0        # deg/s (+-250dps)
-    mx_u, my_u, mz_u = mx * 0.15, my * 0.15, mz * 0.15           # uT
-    
-    data["imu"] = {
-        "ax": ax_g, "ay": ay_g, "az": az_g,
-        "gx": gx_d, "gy": gy_d, "gz": gz_d,
-        "mx": mx_u, "my": my_u, "mz": mz_u,
-        "accel_x": ax_g, "accel_y": ay_g, "accel_z": az_g,
-        "gyro_x": gx_d, "gyro_y": gy_d, "gyro_z": gz_d,
-        "mag_x": mx_u, "my": my_u, "mz": mz_u,
-        "raw": {
-            "ax": ax, "ay": ay, "az": az,
-            "gx": gx, "gy": gy, "gz": gz,
-            "mx": mx, "my": my, "mz": mz,
-        }
-    }
+# Only after CRSF frame length and CRC validation:
+if frame_type == 0x13 and len(payload) == 18:
+    timestamp, gx, gy, gz, ax, ay, az, temp = struct.unpack(">I7h", payload)
+    accel_g = tuple(v * 16.0 / 32767.0 for v in (ax, ay, az))
+    gyro_dps = (-gx * 2000.0 / 32767.0,
+                gy * 2000.0 / 32767.0, gz * 2000.0 / 32767.0)
+    temperature_c = temp / 100.0
 ```
-
----
-
-## 🩺 Diagnostyka Sprzętowa IMU w Czasie Rzeczywistym (Kody Błędów I2C)
-
-Gdy odbiornik nie może nawiązać fizycznej komunikacji z czujnikiem IMU (`!imu_initialized`), zamiast wysyłać zera, przesyła w surowej telemetrii ramki `0x86` (`Raw`) dokładne kody stanu magistrali I2C:
-
-| Oś w RCSIM (`Raw`) | Zmienna w firmware | Wartość | Znaczenie i Diagnoza |
-| :--- | :--- | :---: | :--- |
-| **Acceleration X** | `diag_err68` | **`0`**<br>**`2`**<br>**`3`**<br>**`4`**<br>**`99`**<br>**`255`** | **0** = Połączenie I2C OK (odebrano ACK)<br>**2** = **Brak układu pod 0x68 (NACK on address)**<br>**3** = NACK podczas transmisji danych<br>**4** = Inny błąd magistrali (np. zwarcie)<br>**99** = Stan oczekiwania (brak próby odczytu)<br>**255** = Szyna I2C wyłączona (brak trybów SDA/SCL w WebUI) |
-| **Acceleration Y** | `diag_whoami68` | **`0x71`** (113)<br>**`0x73`** (115)<br>**`0x68`** (104)<br>**`0x70`** (112)<br>**`0`** | **MPU-9250**<br>**MPU-9255**<br>**MPU-6050**<br>**MPU-6500**<br>**0 = Brak odpowiedzi rejestru WHO_AM_I** |
-| **Acceleration Z** | Domyślny wektor | **`16384`** | Stała grawitacji $1.0g$ ($9.81 m/s^2$) – bezpieczny sygnał heartbeat |
-| **Angular velocity X** | `diag_err69` | Kody jak w `diag_err68` | Sprawdzenie alternatywnego adresu I2C `0x69` (gdy AD0 = VCC) |
-| **Angular velocity Y** | `diag_whoami69` | Identyfikatory chipu | Odczytany rejestr WHO_AM_I pod adresem `0x69` |
-| **Angular velocity Z** | `imu_address` | **`104`** (`0x68`)<br>**`105`** (`0x69`) | Aktualnie sprawdzany adres I2C |
-
-### Szybka ściągawka usuwania usterek IMU:
-- **`Acceleration X = 2` oraz `Angular velocity X = 2`:** Układ nie odpowiada elektrycznie na magistrali:
-  1. Zamień miejscami przewody sygnałowe **CH4 (SDA)** i **CH5 (SCL)**.
-  2. Sprawdź zasilanie VCC oraz wspólną masę GND z pinem `-` odbiornika.
-  3. Upewnij się, że wtyczka w gnieździe serw nie jest odwrócona do góry nogami (sygnał jest na górnym pinie).
-- **`Acceleration X = 0`, ale brak danych ruchu:** Układ odpowiedział ACK pod 0x68, ale `Acceleration Y` (WHO_AM_I) nie pasuje do znanych chipów z rodziny MPU.
-- **`Acceleration X = 255`:** W WebUI odbiornika na piny CH4 i CH5 nie ustawiono opcji `I2C SDA` i `I2C SCL`.
 
 ---
 
 ## 🛠️ Zbiór Plików Wydania (Release)
 
 W katalogu `release/` znajdują się gotowe pliki:
-1. `ELRS_V4.1_RadioMaster_ER5Cv2_MPU9250.bin.gz` – Gotowy wsad skompresowany (dla WebUI).
-2. `ELRS_V4.1_RadioMaster_ER5Cv2_MPU9250.bin` – Surowy plik binarny (dla FTDI `esptool.py`).
+1. `ELRS_V4.1_RadioMaster_ER5Cv2_RCSIM_GPS_IMU.bin.gz` – Gotowy wsad skompresowany (dla WebUI).
+2. `ELRS_V4.1_RadioMaster_ER5Cv2_RCSIM_GPS_IMU.bin` – Surowy plik binarny (dla FTDI `esptool.py`).
 3. `README_PL_RadioMaster_ER5Cv2_IMU.md` – Niniejszy dokument instalacyjny (wersja PL).
 4. `README_EN_RadioMaster_ER5Cv2_IMU.md` – Dokumentacja w języku angielskim (wersja EN).

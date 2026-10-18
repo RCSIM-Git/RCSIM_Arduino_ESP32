@@ -4,7 +4,8 @@ import os
 import shutil
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'ExpressLRS/src/python'))
+source_root = os.environ.get("RCSIM_ELRS_SOURCE", r"C:\Users\Mateusz\Desktop\er5c\ExpressLRS\src")
+sys.path.insert(0, os.path.join(source_root, "python"))
 import UnifiedConfiguration
 
 release_dir = r"c:\Users\Mateusz\Desktop\er5c\release"
@@ -13,22 +14,20 @@ os.makedirs(release_dir, exist_ok=True)
 target_repo_dir = r"c:\Users\Mateusz\Desktop\RCSIM27.04monacoSLAM\RCSIM_PC\pc_app\ESP32Arduino\RCSIM_Arduino_ESP32\ExpressLRS ER Series Tier 3 mod"
 os.makedirs(target_repo_dir, exist_ok=True)
 
-build_dir = r"c:\Users\Mateusz\Desktop\er5c\ExpressLRS\src\.pio\build\Unified_ESP8285_2400_RX_via_WIFI"
+build_dir = os.path.join(source_root, ".pio", "build", "Unified_ESP8285_2400_RX_via_WIFI")
 bin_source = os.path.join(build_dir, "firmware.bin")
 gz_source = os.path.join(build_dir, "firmware.bin.gz")
 
-if not os.path.exists(bin_source) and os.path.exists(gz_source):
-    print("Decompressing firmware.bin.gz from build...")
+if os.path.exists(gz_source):
+    print("Reading fresh firmware.bin.gz from build...")
     with gzip.open(gz_source, 'rb') as f_in:
-        decompressed_data = f_in.read()
-    with open(bin_source, 'wb') as f_out:
-        f_out.write(decompressed_data)
+        firmware_data = f_in.read()
+else:
+    with open(bin_source, "rb") as f_in:
+        firmware_data = f_in.read()
 
 bin_release = os.path.join(release_dir, "ELRS_V4.1_RadioMaster_ER5Cv2_RCSIM_GPS_IMU.bin")
 gz_release = os.path.join(release_dir, "ELRS_V4.1_RadioMaster_ER5Cv2_RCSIM_GPS_IMU.bin.gz")
-
-with open(bin_source, "rb") as f_in:
-    firmware_data = f_in.read()
 
 # Write clean base binary
 with open(bin_release, "wb") as f_out:
