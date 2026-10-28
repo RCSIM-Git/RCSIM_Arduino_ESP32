@@ -108,4 +108,4 @@ Projekt zostanie umieszczony w dedykowanym katalogu, zachowując nienaruszone do
 ---
 
 ## 📝 Aktualizacja TODO.md
-Po zakończeniu implementacji zaktualizować [TODO.md](file:///c:/Users/Mateusz/Desktop/RCSIM27.04monacoSLAM/RCSIM_PC/pc_app/ESP32Arduino/RCSIM_Arduino_ESP32/TODO.md) o nowy moduł Tier 2 Pro (CRSF Multi-Link Hub).
+Po zakończeniu implementacji zaktualizować [TODO.md](../../TODO.md) o nowy moduł Tier 2 Pro (CRSF Multi-Link Hub).

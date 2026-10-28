@@ -86,7 +86,7 @@ Zaawansowany bezprzewodowy koncentrator sterowania, wizji i telemetrii oparty na
 ---
 
 ### 💡 Arduino Lights: Inteligentny Sterownik Oświetlenia RC
-*Lokalizacja:* `[Arduino Lights](file:///c:/Users/Mateusz/Desktop/RCSIM27.04monacoSLAM/RCSIM_PC/pc_app/ESP32Arduino/RCSIM_Arduino_ESP32/Arduino%20Lights)`
+*Lokalizacja:* [Arduino Lights](Arduino%20Lights/)
 
 Dedykowany sterownik oświetlenia LED dla modeli RC dekodujący sygnały PWM z odbiornika.
 *   **Tryb Pełny:** Reaguje na CH1 (kierunkowskazy z opóźnieniem histerezy 300 ms), CH2 (stop po zatrzymaniu lub hamowaniu, wsteczny automatyczny), CH3 (włączanie reflektorów i świateł dachowych).
@@ -98,7 +98,7 @@ Dedykowany sterownik oświetlenia LED dla modeli RC dekodujący sygnały PWM z o
 ---
 
 ### 🛡️ Tier 6: Koprocesor Watchdoga i Muxera dla RPi (ESP32)
-*Lokalizacja:* `[ESP32 Tier 6 Watchdog for RPi](file:///c:/Users/Mateusz/Desktop/RCSIM27.04monacoSLAM/RCSIM_PC/pc_app/ESP32Arduino/RCSIM_Arduino_ESP32/ESP32%20Tier%206%20Watchdog%20for%20RPi)`
+*Lokalizacja:* [ESP32 Tier 6 Watchdog for RPi](ESP32%20Tier%206%20Watchdog%20for%20RPi/)
 
 Nadrzędny sterownik bezpieczeństwa (Supervisor) nadzorujący pracę komputera Raspberry Pi 5.
 *   **Detekcja Heartbeat:** Monitorowanie sygnału z RPi 5 na pinie `PIN_HEARTBEAT` (GPIO 4). Brak impulsu przez 1000 ms oznacza zawieszenie komputera i wyzwala tryb Failsafe.
@@ -127,4 +127,4 @@ Nadrzędny sterownik bezpieczeństwa (Supervisor) nadzorujący pracę komputera 
 
 ## 📄 Licencja
 
-Projekt dystrybuowany jest na licencji **MIT**. Szczegóły znajdują się w pliku [LICENSE](file:///c:/Users/Mateusz/Desktop/RCSIM27.04monacoSLAM/RCSIM_PC/pc_app/ESP32Arduino/RCSIM_Arduino_ESP32/LICENSE).
+Projekt dystrybuowany jest na licencji **MIT**. Szczegóły znajdują się w pliku [LICENSE](LICENSE).
