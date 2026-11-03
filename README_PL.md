@@ -1,5 +1,8 @@
 # 🎛️ RCSIM Firmware Subsystem (Tiers 1, 2, 6 & Lights)
 
+> 🌐 **Language / Język:** [English](README.md) | **Polski**
+
+
 Projekt ten stanowi podsystem oprogramowania układowego (Firmware) dla platformy **RCSIM (RC Simulator / Ground Control Station)**. Oprogramowanie obsługuje różne poziomy (Tiers) integracji sprzętowej – od prostych konwerterów sygnałów po zaawansowane koncentratory bezprzewodowe z wizją oraz sprzętowe układy Watchdog nadzorujące komputery jednopłytkowe (Raspberry Pi 5).
 
 ---

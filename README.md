@@ -1,5 +1,8 @@
 # 🎛️ RCSIM Firmware Subsystem (Tiers 1, 2, 6 & Lights)
 
+> 🌐 **Language / Język:** **English** | [Polski](README_PL.md)
+
+
 This project contains the firmware subsystem for the **RCSIM (RC Simulator / Ground Control Station)** platform. The software supports various tiers of hardware integration – ranging from simple signal converters to advanced wireless video/control hubs and hardware watchdog systems supervising single-board computers (such as the Raspberry Pi 5).
 
 ---
